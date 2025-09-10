@@ -1,0 +1,104 @@
+'use client'
+
+import { useState } from 'react'
+
+interface SubmissionModalProps {
+  isOpen: boolean
+  onClose: () => void
+  apiBase: string
+}
+
+export default function SubmissionModal({ isOpen, onClose, apiBase }: SubmissionModalProps) {
+  const [text, setText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!text.trim() || text.length > 280) return
+
+    setSubmitting(true)
+    try {
+      const res = await fetch(`${apiBase}/api/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim() })
+      })
+
+      if (res.ok) {
+        setSubmitted(true)
+        setText('')
+        setTimeout(() => {
+          setSubmitted(false)
+          onClose()
+        }, 2000)
+      }
+    } catch (error) {
+      console.error('Failed to submit:', error)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+        {submitted ? (
+          <div className="text-center">
+            <div className="text-emerald-600 text-4xl mb-4">✓</div>
+            <p className="text-slate-700 font-medium">Thank you!</p>
+            <p className="text-slate-500 text-sm">Your note will be reviewed for tomorrow's drop.</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-slate-800">Share your gratitude</h2>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="I'm grateful for..."
+                  className="w-full h-32 p-3 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  maxLength={280}
+                  disabled={submitting}
+                />
+                <div className="text-right text-sm text-slate-400 mt-1">
+                  {text.length}/280
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!text.trim() || text.length > 280 || submitting}
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white rounded-lg transition-colors"
+                >
+                  {submitting ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}

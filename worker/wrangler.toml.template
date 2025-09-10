@@ -1,0 +1,18 @@
+name = "gratitude-drop-worker"
+main = "src/index.ts"
+compatibility_date = "2023-12-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gratitude-drop-db"
+database_id = "YOUR-DATABASE-ID-HERE"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "YOUR-KV-NAMESPACE-ID-HERE"
+
+[vars]
+CORS_ORIGIN = "https://your-vercel-app.vercel.app"
+
+[env.production.vars]
+ADMIN_SECRET = "your-secret-key-here"
