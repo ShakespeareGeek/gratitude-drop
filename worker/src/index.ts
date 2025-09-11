@@ -54,6 +54,10 @@ export default {
         return handleSubmit(request, env, corsHead);
       }
       
+      if (url.pathname.startsWith('/api/note/') && request.method === 'GET') {
+        return handleGetNote(request, env, corsHead);
+      }
+      
       if (url.pathname === '/admin') {
         return handleAdmin(request, env);
       }
@@ -199,6 +203,39 @@ async function handleSubmit(request: Request, env: Env, corsHead: HeadersInit): 
   return new Response(JSON.stringify({ success: true }), {
     headers: { ...corsHead, 'Content-Type': 'application/json' }
   });
+}
+
+async function handleGetNote(request: Request, env: Env, corsHead: HeadersInit): Promise<Response> {
+  const url = new URL(request.url);
+  const noteId = url.pathname.split('/').pop();
+  
+  if (!noteId || isNaN(Number(noteId))) {
+    return new Response(JSON.stringify({ error: 'Invalid note ID' }), {
+      status: 400,
+      headers: { ...corsHead, 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const note = await env.DB.prepare('SELECT id, text, hearts FROM notes WHERE id = ?')
+      .bind(Number(noteId)).first();
+
+    if (!note) {
+      return new Response(JSON.stringify({ error: 'Note not found' }), {
+        status: 404,
+        headers: { ...corsHead, 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify(note), {
+      headers: { ...corsHead, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Failed to fetch note' }), {
+      status: 500,
+      headers: { ...corsHead, 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 async function handleAdmin(request: Request, env: Env): Promise<Response> {
