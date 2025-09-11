@@ -118,7 +118,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-12 max-w-2xl">
         <header className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-4">
-            The Daily Gratitude Drop v2
+            The Daily Gratitude Drop
           </h1>
           <p className="text-xl text-slate-600 mb-8">
             5 anonymous thank-you notes. One minute. Zero noise.
