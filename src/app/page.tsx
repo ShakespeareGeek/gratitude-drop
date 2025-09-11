@@ -92,6 +92,26 @@ export default function Home() {
     document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const handleShare = () => {
+    const shareText = "One of today's #GratitudeDrop notes hit me hard. Get the rest here → https://www.gratitudedrop.com"
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
+    
+    // Try native sharing first (mobile), fallback to Twitter
+    if (navigator.share) {
+      navigator.share({
+        title: 'The Daily Gratitude Drop',
+        text: shareText,
+        url: 'https://www.gratitudedrop.com'
+      }).catch(() => {
+        // Fallback to Twitter if native sharing fails
+        window.open(shareUrl, '_blank')
+      })
+    } else {
+      // Desktop: open Twitter
+      window.open(shareUrl, '_blank')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -154,6 +174,14 @@ export default function Home() {
                     >
                       <span className="text-xl">♥</span>
                       <span className="font-medium">{note.hearts}</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => handleShare()}
+                      className="flex items-center space-x-2 text-slate-400 hover:text-emerald-500 transition-colors"
+                    >
+                      <span className="text-lg">↗</span>
+                      <span className="font-medium text-sm">Share this drop</span>
                     </button>
                   </div>
                 </div>
