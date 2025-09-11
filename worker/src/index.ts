@@ -106,6 +106,26 @@ async function handleHeart(request: Request, env: Env, corsHead: HeadersInit): P
 }
 
 async function handleSubmit(request: Request, env: Env, corsHead: HeadersInit): Promise<Response> {
+  const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const now = Date.now();
+  const hourAgo = now - (60 * 60 * 1000);
+  
+  // Check rate limit: 5 submissions per IP per hour
+  const rateLimitKey = `rate_limit_${clientIP}`;
+  const submissions = await env.CACHE.get(rateLimitKey);
+  
+  let submissionTimes: number[] = [];
+  if (submissions) {
+    submissionTimes = JSON.parse(submissions).filter((time: number) => time > hourAgo);
+  }
+  
+  if (submissionTimes.length >= 5) {
+    return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
+      status: 429,
+      headers: { ...corsHead, 'Content-Type': 'application/json' }
+    });
+  }
+
   const { text } = await request.json();
   
   if (!text || text.length > 280) {
@@ -117,6 +137,10 @@ async function handleSubmit(request: Request, env: Env, corsHead: HeadersInit): 
 
   await env.DB.prepare('INSERT INTO submissions (text) VALUES (?)')
     .bind(text).run();
+
+  // Update rate limit
+  submissionTimes.push(now);
+  await env.CACHE.put(rateLimitKey, JSON.stringify(submissionTimes), { expirationTtl: 3600 });
 
   return new Response(JSON.stringify({ success: true }), {
     headers: { ...corsHead, 'Content-Type': 'application/json' }
