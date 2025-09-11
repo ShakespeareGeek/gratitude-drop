@@ -118,7 +118,7 @@ export default function Home() {
       <div className="container mx-auto px-4 py-12 max-w-2xl">
         <header className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-4">
-            The Daily Gratitude Drop
+            The Daily Gratitude Drop v2
           </h1>
           <p className="text-xl text-slate-600 mb-8">
             5 anonymous thank-you notes. One minute. Zero noise.
@@ -166,7 +166,7 @@ export default function Home() {
           )}
         </section>
 
-        <div className="text-center">
+        <div className="text-center pb-16">
           <button
             onClick={() => setShowModal(true)}
             className="bg-slate-700 hover:bg-slate-800 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg"
