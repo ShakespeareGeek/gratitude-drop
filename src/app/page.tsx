@@ -348,7 +348,7 @@ export default function Home() {
             onClick={() => setShowModal(true)}
             className="bg-slate-700 hover:bg-slate-800 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg"
           >
-            Add to tomorrow's drop
+            Add to a future drop
           </button>
         </div>
       </div>

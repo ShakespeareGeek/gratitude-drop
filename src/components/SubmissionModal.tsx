@@ -49,7 +49,7 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
           <div className="text-center">
             <div className="text-emerald-600 text-4xl mb-4">✓</div>
             <p className="text-slate-700 font-medium">Thank you!</p>
-            <p className="text-slate-500 text-sm">Your note will be reviewed for tomorrow's drop.</p>
+            <p className="text-slate-500 text-sm">Your note will be reviewed for a future drop.</p>
           </div>
         ) : (
           <>
@@ -61,6 +61,12 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
               >
                 ×
               </button>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-emerald-800">
+                <strong>Notes are collected and curated</strong> for future drops. We review each submission to maintain quality and kindness. Please keep your gratitude genuine and respectful.
+              </p>
             </div>
 
             <form onSubmit={handleSubmit}>
