@@ -68,17 +68,21 @@ export default {
 async function ensureTodayDropExists(env: Env): Promise<void> {
   const dropId = getTodayDropId();
   
-  // Check if today's drop already has notes
+  // Check if today's drop already has exactly 5 notes
   const existingNotes = await env.DB.prepare('SELECT COUNT(*) as count FROM notes WHERE dropId = ?').bind(dropId).first();
+  const currentCount = existingNotes?.count || 0;
   
-  if (existingNotes && existingNotes.count >= 5) {
-    return; // Drop already populated
+  if (currentCount >= 5) {
+    return; // Drop already complete with 5+ notes
   }
   
-  // Get the next 5 highest priority approved submissions
+  // Calculate how many more notes we need (up to 5 total)
+  const needed = 5 - currentCount;
+  
+  // Get the next highest priority approved submissions
   const approvedNotes = await env.DB.prepare(
-    'SELECT id, text FROM submissions WHERE status = ? ORDER BY priority DESC, created ASC LIMIT 5'
-  ).bind('approved').all();
+    'SELECT id, text FROM submissions WHERE status = ? ORDER BY priority DESC, created ASC LIMIT ?'
+  ).bind('approved', needed).all();
   
   if (approvedNotes.results && approvedNotes.results.length > 0) {
     // Ensure drop exists
