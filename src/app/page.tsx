@@ -25,6 +25,7 @@ export default function Home() {
   const [showBanner, setShowBanner] = useState(false)
   const [sharedNote, setSharedNote] = useState<Note | null>(null)
   const [showSharedModal, setShowSharedModal] = useState(false)
+  const [currentNoteIndex, setCurrentNoteIndex] = useState(0)
 
   useEffect(() => {
     fetchDrop()
@@ -32,6 +33,54 @@ export default function Home() {
     loadLikedNotes()
     checkSharedNote()
   }, [])
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        prevNote()
+      } else if (e.key === 'ArrowRight') {
+        nextNote()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [currentNoteIndex, drop?.notes])
+
+  // Touch swipe support
+  useEffect(() => {
+    let touchStartX = 0
+    let touchEndX = 0
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.changedTouches[0].screenX
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      touchEndX = e.changedTouches[0].screenX
+      const swipeThreshold = 50
+      
+      if (touchStartX - touchEndX > swipeThreshold) {
+        nextNote() // Swipe left = next
+      }
+      
+      if (touchEndX - touchStartX > swipeThreshold) {
+        prevNote() // Swipe right = previous
+      }
+    }
+
+    const notesSection = document.getElementById('notes-section')
+    if (notesSection) {
+      notesSection.addEventListener('touchstart', handleTouchStart)
+      notesSection.addEventListener('touchend', handleTouchEnd)
+      
+      return () => {
+        notesSection.removeEventListener('touchstart', handleTouchStart)
+        notesSection.removeEventListener('touchend', handleTouchEnd)
+      }
+    }
+  }, [currentNoteIndex, drop?.notes])
 
   const checkSharedNote = async () => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -113,6 +162,22 @@ export default function Home() {
     document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const nextNote = () => {
+    if (drop?.notes && currentNoteIndex < drop.notes.length - 1) {
+      setCurrentNoteIndex(currentNoteIndex + 1)
+    }
+  }
+
+  const prevNote = () => {
+    if (currentNoteIndex > 0) {
+      setCurrentNoteIndex(currentNoteIndex - 1)
+    }
+  }
+
+  const goToNote = (index: number) => {
+    setCurrentNoteIndex(index)
+  }
+
   const handleShare = (noteId: number) => {
     const shareMessages = [
       "This #GratitudeDrop note really resonated with me. See it here →",
@@ -185,39 +250,91 @@ export default function Home() {
 
         <section id="notes-section" className="mb-12">
           {drop?.notes && drop.notes.length > 0 ? (
-            <div className="space-y-6">
-              {drop.notes.map((note) => (
-                <div 
-                  key={note.id}
-                  className="bg-white rounded-lg shadow-md p-6 border border-slate-200"
-                >
-                  <p className="text-lg font-serif text-slate-700 leading-relaxed mb-4">
-                    "{note.text}"
+            <div className="relative">
+              {/* Progress indicator */}
+              <div className="flex justify-center space-x-2 mb-6">
+                {drop.notes.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToNote(index)}
+                    className={`w-3 h-3 rounded-full transition-colors ${
+                      index === currentNoteIndex 
+                        ? 'bg-emerald-500' 
+                        : 'bg-slate-300 hover:bg-slate-400'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {/* Current note display */}
+              <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200 min-h-[300px] flex flex-col justify-between">
+                <div className="flex-grow flex items-center">
+                  <p className="text-xl md:text-2xl font-serif text-slate-700 leading-relaxed text-center">
+                    "{drop.notes[currentNoteIndex].text}"
                   </p>
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => handleHeart(note.id)}
-                      disabled={likedNotes.has(note.id)}
-                      className={`flex items-center space-x-2 transition-colors ${
-                        likedNotes.has(note.id)
-                          ? 'text-red-400 cursor-not-allowed' 
-                          : 'text-slate-400 hover:text-red-500'
-                      }`}
-                    >
-                      <span className="text-xl">♥</span>
-                      <span className="font-medium">{note.hearts}</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => handleShare(note.id)}
-                      className="flex items-center space-x-2 text-slate-400 hover:text-emerald-500 transition-colors"
-                    >
-                      <span className="text-lg">↗</span>
-                      <span className="font-medium text-sm">Share this note</span>
-                    </button>
-                  </div>
                 </div>
-              ))}
+                
+                <div className="flex items-center justify-between mt-8">
+                  <button
+                    onClick={() => handleHeart(drop.notes[currentNoteIndex].id)}
+                    disabled={likedNotes.has(drop.notes[currentNoteIndex].id)}
+                    className={`flex items-center space-x-2 transition-colors ${
+                      likedNotes.has(drop.notes[currentNoteIndex].id)
+                        ? 'text-red-400 cursor-not-allowed' 
+                        : 'text-slate-400 hover:text-red-500'
+                    }`}
+                  >
+                    <span className="text-2xl">♥</span>
+                    <span className="font-medium text-lg">{drop.notes[currentNoteIndex].hearts}</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => handleShare(drop.notes[currentNoteIndex].id)}
+                    className="flex items-center space-x-2 text-slate-400 hover:text-emerald-500 transition-colors"
+                  >
+                    <span className="text-xl">↗</span>
+                    <span className="font-medium">Share this note</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Navigation arrows */}
+              <div className="flex justify-between items-center mt-6">
+                <button
+                  onClick={prevNote}
+                  disabled={currentNoteIndex === 0}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    currentNoteIndex === 0 
+                      ? 'text-slate-300 cursor-not-allowed' 
+                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="text-xl">&larr;</span>
+                  <span className="font-medium">Previous</span>
+                </button>
+
+                <div className="text-sm text-slate-500 font-medium">
+                  {currentNoteIndex + 1} of {drop.notes.length}
+                </div>
+
+                <button
+                  onClick={nextNote}
+                  disabled={currentNoteIndex === drop.notes.length - 1}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    currentNoteIndex === drop.notes.length - 1
+                      ? 'text-slate-300 cursor-not-allowed' 
+                      : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="font-medium">Next</span>
+                  <span className="text-xl">&rarr;</span>
+                </button>
+              </div>
+
+              {/* Touch swipe hint on mobile */}
+              <div className="text-center mt-4 md:hidden">
+                <p className="text-xs text-slate-400">Swipe left or right to navigate</p>
+              </div>
             </div>
           ) : (
             <div className="text-center py-12">
