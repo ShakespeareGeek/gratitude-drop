@@ -48,36 +48,69 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [currentNoteIndex, drop?.notes])
 
-  // Touch swipe support
+  // Touch swipe and mouse drag support
   useEffect(() => {
-    let touchStartX = 0
-    let touchEndX = 0
+    let startX = 0
+    let endX = 0
+    let isDragging = false
 
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartX = e.changedTouches[0].screenX
+    const handleStart = (e: TouchEvent | MouseEvent) => {
+      startX = 'touches' in e ? e.touches[0].clientX : e.clientX
+      isDragging = true
     }
 
-    const handleTouchEnd = (e: TouchEvent) => {
-      touchEndX = e.changedTouches[0].screenX
+    const handleMove = (e: TouchEvent | MouseEvent) => {
+      if (!isDragging) return
+      e.preventDefault() // Prevent text selection during drag
+    }
+
+    const handleEnd = (e: TouchEvent | MouseEvent) => {
+      if (!isDragging) return
+      endX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX
+      isDragging = false
+      
       const swipeThreshold = 50
+      const diff = startX - endX
       
-      if (touchStartX - touchEndX > swipeThreshold) {
-        nextNote() // Swipe left = next
-      }
-      
-      if (touchEndX - touchStartX > swipeThreshold) {
-        prevNote() // Swipe right = previous
+      if (Math.abs(diff) > swipeThreshold) {
+        if (diff > 0) {
+          nextNote() // Drag left = next
+        } else {
+          prevNote() // Drag right = previous
+        }
       }
     }
 
     const notesSection = document.getElementById('notes-section')
     if (notesSection) {
-      notesSection.addEventListener('touchstart', handleTouchStart)
-      notesSection.addEventListener('touchend', handleTouchEnd)
+      // Touch events
+      notesSection.addEventListener('touchstart', handleStart)
+      notesSection.addEventListener('touchmove', handleMove)
+      notesSection.addEventListener('touchend', handleEnd)
+      
+      // Mouse events
+      notesSection.addEventListener('mousedown', handleStart)
+      notesSection.addEventListener('mousemove', handleMove)
+      notesSection.addEventListener('mouseup', handleEnd)
+      notesSection.addEventListener('mouseleave', () => isDragging = false)
+      
+      // Make it feel more draggable
+      notesSection.style.cursor = 'grab'
+      notesSection.addEventListener('mousedown', () => {
+        if (notesSection) notesSection.style.cursor = 'grabbing'
+      })
+      notesSection.addEventListener('mouseup', () => {
+        if (notesSection) notesSection.style.cursor = 'grab'
+      })
       
       return () => {
-        notesSection.removeEventListener('touchstart', handleTouchStart)
-        notesSection.removeEventListener('touchend', handleTouchEnd)
+        notesSection.removeEventListener('touchstart', handleStart)
+        notesSection.removeEventListener('touchmove', handleMove)
+        notesSection.removeEventListener('touchend', handleEnd)
+        notesSection.removeEventListener('mousedown', handleStart)
+        notesSection.removeEventListener('mousemove', handleMove)
+        notesSection.removeEventListener('mouseup', handleEnd)
+        notesSection.removeEventListener('mouseleave', () => isDragging = false)
       }
     }
   }, [currentNoteIndex, drop?.notes])
@@ -331,9 +364,14 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Touch swipe hint on mobile */}
-              <div className="text-center mt-4 md:hidden">
-                <p className="text-xs text-slate-400">Swipe left or right to navigate</p>
+              {/* Navigation hints */}
+              <div className="text-center mt-4">
+                <p className="text-xs text-slate-400 md:hidden">
+                  Swipe left or right to navigate
+                </p>
+                <p className="text-xs text-slate-400 hidden md:block">
+                  Drag, use arrow keys, or click buttons to navigate
+                </p>
               </div>
             </div>
           ) : (
