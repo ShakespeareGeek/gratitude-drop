@@ -23,12 +23,33 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false)
   const [likedNotes, setLikedNotes] = useState<Set<number>>(new Set())
   const [showBanner, setShowBanner] = useState(false)
+  const [sharedNote, setSharedNote] = useState<Note | null>(null)
+  const [showSharedModal, setShowSharedModal] = useState(false)
 
   useEffect(() => {
     fetchDrop()
     checkFirstVisit()
     loadLikedNotes()
+    checkSharedNote()
   }, [])
+
+  const checkSharedNote = async () => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const noteId = urlParams.get('note')
+    
+    if (noteId) {
+      try {
+        const res = await fetch(`${API_BASE}/api/note/${noteId}`)
+        if (res.ok) {
+          const noteData = await res.json()
+          setSharedNote(noteData)
+          setShowSharedModal(true)
+        }
+      } catch (error) {
+        console.error('Failed to fetch shared note:', error)
+      }
+    }
+  }
 
   const fetchDrop = async () => {
     try {
@@ -92,16 +113,27 @@ export default function Home() {
     document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const handleShare = () => {
-    const shareText = "One of today's #GratitudeDrop notes hit me hard. Get the rest here → https://www.gratitudedrop.com"
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
+  const handleShare = (noteId: number) => {
+    const shareMessages = [
+      "This #GratitudeDrop note really resonated with me. See it here →",
+      "Found this beautiful gratitude note that made my day →", 
+      "This #GratitudeDrop made me pause and reflect →",
+      "This gratitude note reminded me what matters most →",
+      "Loving this perspective from today's #GratitudeDrop →",
+      "This anonymous thank-you note touched my heart →"
+    ]
+    
+    const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
+    const shareLink = `https://www.gratitudedrop.com?note=${noteId}`
+    const fullShareText = `${randomMessage} ${shareLink}`
+    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(fullShareText)}`
     
     // Try native sharing first (mobile), fallback to Twitter
     if (navigator.share) {
       navigator.share({
         title: 'The Daily Gratitude Drop',
-        text: shareText,
-        url: 'https://www.gratitudedrop.com'
+        text: randomMessage,
+        url: shareLink
       }).catch(() => {
         // Fallback to Twitter if native sharing fails
         window.open(shareUrl, '_blank')
@@ -177,11 +209,11 @@ export default function Home() {
                     </button>
                     
                     <button
-                      onClick={() => handleShare()}
+                      onClick={() => handleShare(note.id)}
                       className="flex items-center space-x-2 text-slate-400 hover:text-emerald-500 transition-colors"
                     >
                       <span className="text-lg">↗</span>
-                      <span className="font-medium text-sm">Share this drop</span>
+                      <span className="font-medium text-sm">Share this note</span>
                     </button>
                   </div>
                 </div>
@@ -210,6 +242,50 @@ export default function Home() {
           onClose={() => setShowModal(false)}
           apiBase={API_BASE}
         />
+      )}
+
+      {showSharedModal && sharedNote && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-slate-800">Shared Gratitude Note</h2>
+              <button
+                onClick={() => {
+                  setShowSharedModal(false)
+                  // Clean up URL
+                  window.history.replaceState({}, '', '/')
+                }}
+                className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="bg-emerald-50 rounded-lg p-4 mb-4">
+              <p className="text-lg font-serif text-slate-700 leading-relaxed">
+                "{sharedNote.text}"
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
+              <span>♥ {sharedNote.hearts} hearts</span>
+              <span>Anonymous gratitude</span>
+            </div>
+            
+            <div className="text-center">
+              <button
+                onClick={() => {
+                  setShowSharedModal(false)
+                  window.history.replaceState({}, '', '/')
+                  scrollToNotes()
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+              >
+                See Today's Drop
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
