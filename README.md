@@ -35,3 +35,4 @@ npm run deploy
 - **Backend**: Cloudflare Worker + D1 + KV
 - **No auth**: Cookie-based streaks only
 - **Daily cycle**: New drops at 00:00 UTC, manual approval flow
+# Production ready
