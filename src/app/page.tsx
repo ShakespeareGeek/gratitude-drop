@@ -410,13 +410,22 @@ export default function Home() {
           )}
         </section>
 
-        <div className="text-center pb-16">
+        <div className="text-center pb-12">
           <button
             onClick={() => setShowModal(true)}
             className="bg-slate-700 hover:bg-slate-800 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg"
           >
             What are you grateful for?
           </button>
+        </div>
+
+        <div className="text-center pb-16">
+          <a 
+            href="mailto:feedback@gratitudedrop.com"
+            className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            feedback@gratitudedrop.com
+          </a>
         </div>
       </div>
 

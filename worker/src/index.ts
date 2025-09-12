@@ -19,7 +19,18 @@ interface Submission {
   created: string;
 }
 
-function corsHeaders(origin: string) {
+function corsHeaders(env: Env, requestOrigin?: string) {
+  // Allow both production domain and localhost for development
+  const allowedOrigins = [
+    env.CORS_ORIGIN, // Production domain from env var
+    'http://localhost:3000', // Next.js dev server
+    'http://127.0.0.1:3000'  // Alternative localhost
+  ];
+  
+  const origin = requestOrigin && allowedOrigins.includes(requestOrigin) 
+    ? requestOrigin 
+    : env.CORS_ORIGIN;
+  
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -67,7 +78,8 @@ function getTodayDropId(): string {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const corsHead = corsHeaders(env.CORS_ORIGIN);
+    const requestOrigin = request.headers.get('Origin');
+    const corsHead = corsHeaders(env, requestOrigin);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHead });
