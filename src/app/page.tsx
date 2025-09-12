@@ -305,15 +305,9 @@ export default function Home() {
           <h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-4">
             The Daily Gratitude Drop
           </h1>
-          <p className="text-xl text-slate-600 mb-8">
+          <p className="text-xl text-slate-600">
             5 anonymous thank-you notes. One minute. Zero noise.
           </p>
-          <button 
-            onClick={scrollToNotes}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors"
-          >
-            Get Today's Drop
-          </button>
         </header>
 
         <section id="notes-section" className="mb-12">
