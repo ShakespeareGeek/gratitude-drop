@@ -26,6 +26,7 @@ export default function Home() {
   const [sharedNote, setSharedNote] = useState<Note | null>(null)
   const [showSharedModal, setShowSharedModal] = useState(false)
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0)
+  const [autoAdvancePaused, setAutoAdvancePaused] = useState(false)
 
   useEffect(() => {
     fetchDrop()
@@ -74,9 +75,9 @@ export default function Home() {
       
       if (Math.abs(diff) > swipeThreshold) {
         if (diff > 0) {
-          nextNote() // Drag left = next
+          nextNote() // Drag left = next (already calls pauseAutoAdvance)
         } else {
-          prevNote() // Drag right = previous
+          prevNote() // Drag right = previous (already calls pauseAutoAdvance)
         }
       }
     }
@@ -103,6 +104,10 @@ export default function Home() {
         if (notesSection) notesSection.style.cursor = 'grab'
       })
       
+      // Pause auto-advance on hover/focus
+      notesSection.addEventListener('mouseenter', pauseAutoAdvance)
+      notesSection.addEventListener('focusin', pauseAutoAdvance)
+      
       return () => {
         notesSection.removeEventListener('touchstart', handleStart)
         notesSection.removeEventListener('touchmove', handleMove)
@@ -111,9 +116,26 @@ export default function Home() {
         notesSection.removeEventListener('mousemove', handleMove)
         notesSection.removeEventListener('mouseup', handleEnd)
         notesSection.removeEventListener('mouseleave', () => isDragging = false)
+        notesSection.removeEventListener('mouseenter', pauseAutoAdvance)
+        notesSection.removeEventListener('focusin', pauseAutoAdvance)
       }
     }
   }, [currentNoteIndex, drop?.notes])
+
+  // Auto-advance timer
+  useEffect(() => {
+    if (!drop?.notes || drop.notes.length <= 1 || autoAdvancePaused) return
+
+    const timer = setInterval(() => {
+      setCurrentNoteIndex(prevIndex => {
+        const nextIndex = prevIndex + 1
+        // Loop back to beginning after reaching the end
+        return nextIndex >= drop.notes.length ? 0 : nextIndex
+      })
+    }, 8000) // 8 seconds per note
+
+    return () => clearInterval(timer)
+  }, [drop?.notes, currentNoteIndex, autoAdvancePaused])
 
   const checkSharedNote = async () => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -170,6 +192,8 @@ export default function Home() {
   const handleHeart = async (noteId: number) => {
     if (likedNotes.has(noteId)) return
 
+    pauseAutoAdvance()
+    
     try {
       await fetch(`${API_BASE}/api/heart`, {
         method: 'POST',
@@ -195,23 +219,34 @@ export default function Home() {
     document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const pauseAutoAdvance = () => {
+    setAutoAdvancePaused(true)
+    // Resume auto-advance after 15 seconds of no interaction
+    setTimeout(() => setAutoAdvancePaused(false), 15000)
+  }
+
   const nextNote = () => {
     if (drop?.notes && currentNoteIndex < drop.notes.length - 1) {
       setCurrentNoteIndex(currentNoteIndex + 1)
+      pauseAutoAdvance()
     }
   }
 
   const prevNote = () => {
     if (currentNoteIndex > 0) {
       setCurrentNoteIndex(currentNoteIndex - 1)
+      pauseAutoAdvance()
     }
   }
 
   const goToNote = (index: number) => {
     setCurrentNoteIndex(index)
+    pauseAutoAdvance()
   }
 
   const handleShare = (noteId: number) => {
+    pauseAutoAdvance()
+    
     const shareMessages = [
       "This #GratitudeDrop note really resonated with me. See it here →",
       "Found this beautiful gratitude note that made my day →", 
@@ -367,10 +402,10 @@ export default function Home() {
               {/* Navigation hints */}
               <div className="text-center mt-4">
                 <p className="text-xs text-slate-400 md:hidden">
-                  Swipe left or right to navigate
+                  Swipe left or right to navigate • Auto-advances every 8s
                 </p>
                 <p className="text-xs text-slate-400 hidden md:block">
-                  Drag, use arrow keys, or click buttons to navigate
+                  Drag, use arrow keys, or click buttons to navigate • Auto-advances every 8s
                 </p>
               </div>
             </div>
@@ -386,7 +421,7 @@ export default function Home() {
             onClick={() => setShowModal(true)}
             className="bg-slate-700 hover:bg-slate-800 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg"
           >
-            Add to a future drop
+            What are you grateful for?
           </button>
         </div>
       </div>
