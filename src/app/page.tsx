@@ -124,8 +124,8 @@ export default function Home() {
       })
       
       // Pause auto-advance on hover/focus
-      notesSection.addEventListener('mouseenter', pauseAutoAdvance)
-      notesSection.addEventListener('focusin', pauseAutoAdvance)
+      notesSection.addEventListener('mouseenter', () => pauseAutoAdvance())
+      notesSection.addEventListener('focusin', () => pauseAutoAdvance())
       
       return () => {
         notesSection.removeEventListener('touchstart', handleStart)
@@ -135,8 +135,8 @@ export default function Home() {
         notesSection.removeEventListener('mousemove', handleMove)
         notesSection.removeEventListener('mouseup', handleEnd)
         notesSection.removeEventListener('mouseleave', () => isDragging = false)
-        notesSection.removeEventListener('mouseenter', pauseAutoAdvance)
-        notesSection.removeEventListener('focusin', pauseAutoAdvance)
+        notesSection.removeEventListener('mouseenter', () => pauseAutoAdvance())
+        notesSection.removeEventListener('focusin', () => pauseAutoAdvance())
       }
     }
   }, [currentNoteIndex, drop?.notes])
