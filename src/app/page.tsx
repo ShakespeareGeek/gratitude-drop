@@ -22,7 +22,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [likedNotes, setLikedNotes] = useState<Set<number>>(new Set())
-  const [showBanner, setShowBanner] = useState(false)
   const [sharedNote, setSharedNote] = useState<Note | null>(null)
   const [showSharedModal, setShowSharedModal] = useState(false)
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0)
@@ -30,7 +29,6 @@ export default function Home() {
 
   useEffect(() => {
     fetchDrop()
-    checkFirstVisit()
     loadLikedNotes()
     checkSharedNote()
   }, [])
@@ -52,17 +50,33 @@ export default function Home() {
   // Touch swipe and mouse drag support
   useEffect(() => {
     let startX = 0
+    let startY = 0
     let endX = 0
     let isDragging = false
+    let isHorizontalSwipe = false
 
     const handleStart = (e: TouchEvent | MouseEvent) => {
       startX = 'touches' in e ? e.touches[0].clientX : e.clientX
+      startY = 'touches' in e ? e.touches[0].clientY : e.clientY
       isDragging = true
+      isHorizontalSwipe = false
     }
 
     const handleMove = (e: TouchEvent | MouseEvent) => {
       if (!isDragging) return
-      e.preventDefault() // Prevent text selection during drag
+      
+      const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX
+      const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY
+      
+      const deltaX = Math.abs(currentX - startX)
+      const deltaY = Math.abs(currentY - startY)
+      
+      // Only prevent default if this is clearly a horizontal swipe
+      if (deltaX > deltaY && deltaX > 10) {
+        isHorizontalSwipe = true
+        e.preventDefault() // Prevent text selection during horizontal drag
+      }
+      // For vertical movements or ambiguous movements, let the browser handle scrolling
     }
 
     const handleEnd = (e: TouchEvent | MouseEvent) => {
@@ -70,16 +84,21 @@ export default function Home() {
       endX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX
       isDragging = false
       
-      const swipeThreshold = 50
-      const diff = startX - endX
-      
-      if (Math.abs(diff) > swipeThreshold) {
-        if (diff > 0) {
-          nextNote() // Drag left = next (already calls pauseAutoAdvance)
-        } else {
-          prevNote() // Drag right = previous (already calls pauseAutoAdvance)
+      // Only trigger navigation if this was a horizontal swipe
+      if (isHorizontalSwipe) {
+        const swipeThreshold = 50
+        const diff = startX - endX
+        
+        if (Math.abs(diff) > swipeThreshold) {
+          if (diff > 0) {
+            nextNote() // Drag left = next (already calls pauseAutoAdvance)
+          } else {
+            prevNote() // Drag right = previous (already calls pauseAutoAdvance)
+          }
         }
       }
+      
+      isHorizontalSwipe = false
     }
 
     const notesSection = document.getElementById('notes-section')
@@ -167,15 +186,6 @@ export default function Home() {
     }
   }
 
-  const checkFirstVisit = () => {
-    const today = new Date().toISOString().split('T')[0]
-    const lastVisit = localStorage.getItem('lastVisit')
-    
-    if (lastVisit !== today) {
-      setShowBanner(true)
-      localStorage.setItem('lastVisit', today)
-    }
-  }
 
   const loadLikedNotes = () => {
     const liked = new Set<number>()
@@ -219,46 +229,50 @@ export default function Home() {
     document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const pauseAutoAdvance = () => {
+  const pauseAutoAdvance = (permanent = false) => {
     setAutoAdvancePaused(true)
-    // Resume auto-advance after 15 seconds of no interaction
-    setTimeout(() => setAutoAdvancePaused(false), 15000)
+    if (!permanent) {
+      // Resume auto-advance after 15 seconds of no interaction (for hover/heart/share)
+      setTimeout(() => setAutoAdvancePaused(false), 15000)
+    }
+    // If permanent=true, auto-advance stays disabled for the session
   }
 
   const nextNote = () => {
     if (drop?.notes && currentNoteIndex < drop.notes.length - 1) {
       setCurrentNoteIndex(currentNoteIndex + 1)
-      pauseAutoAdvance()
+      pauseAutoAdvance(true) // Permanently disable auto-advance
     }
   }
 
   const prevNote = () => {
     if (currentNoteIndex > 0) {
       setCurrentNoteIndex(currentNoteIndex - 1)
-      pauseAutoAdvance()
+      pauseAutoAdvance(true) // Permanently disable auto-advance
     }
   }
 
   const goToNote = (index: number) => {
     setCurrentNoteIndex(index)
-    pauseAutoAdvance()
+    pauseAutoAdvance(true) // Permanently disable auto-advance
   }
 
   const handleShare = (noteId: number) => {
     pauseAutoAdvance()
     
     const shareMessages = [
-      "This #GratitudeDrop note really resonated with me. See it here →",
-      "Found this beautiful gratitude note that made my day →", 
-      "This #GratitudeDrop made me pause and reflect →",
-      "This gratitude note reminded me what matters most →",
-      "Loving this perspective from today's #GratitudeDrop →",
-      "This anonymous thank-you note touched my heart →"
+      "Ok this site is weirdly wholesome and I'm here for it →",
+      "Who knew reading about other people's good days can make yours better?",
+      "Coffee, Crossword, Gratitude. My new morning ritual →",
+      "Remind yourself what matters most →", 
+      "Pause and reflect on positive things →",
+      "Warning: gratitude may be contagious →",
+      "A moment of calm in a noisy world →"
     ]
     
     const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
     const shareLink = `https://www.gratitudedrop.com?note=${noteId}`
-    const fullShareText = `${randomMessage} ${shareLink}`
+    const fullShareText = `${randomMessage} ${shareLink} #GratitudeDrop`
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(fullShareText)}`
     
     // Try native sharing first (mobile), fallback to Twitter
@@ -289,16 +303,6 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-slate-100">
       <StreakCounter />
       
-      {showBanner && (
-        <div className="bg-emerald-100 border-b border-emerald-200 p-4 text-center">
-          <button 
-            onClick={() => { scrollToNotes(); setShowBanner(false) }}
-            className="text-emerald-700 font-medium hover:text-emerald-800"
-          >
-            Today's drop is ready →
-          </button>
-        </div>
-      )}
 
       <div className="container mx-auto px-4 py-12 max-w-2xl">
         <header className="text-center mb-12">
@@ -396,10 +400,10 @@ export default function Home() {
               {/* Navigation hints */}
               <div className="text-center mt-4">
                 <p className="text-xs text-slate-400 md:hidden">
-                  Swipe left or right to navigate • Auto-advances every 8s
+                  Swipe left or right to navigate • Auto-advances every 8s {autoAdvancePaused ? '(paused)' : ''}
                 </p>
                 <p className="text-xs text-slate-400 hidden md:block">
-                  Drag, use arrow keys, or click buttons to navigate • Auto-advances every 8s
+                  Drag, use arrow keys, or click buttons to navigate • Auto-advances every 8s {autoAdvancePaused ? '(paused)' : ''}
                 </p>
               </div>
             </div>

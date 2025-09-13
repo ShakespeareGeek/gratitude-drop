@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.gratitudedrop.com'),
   title: 'The Daily Gratitude Drop',
   description: '5 anonymous thank-you notes. One minute. Zero noise.',
   openGraph: {

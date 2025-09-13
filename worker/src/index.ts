@@ -105,6 +105,10 @@ export default {
       if (url.pathname === '/admin') {
         return handleAdmin(request, env);
       }
+      
+      if (url.pathname === '/admin/analytics') {
+        return handleAdminAnalytics(request, env);
+      }
 
       return new Response('Not Found', { status: 404, headers: corsHead });
     } catch (error) {
@@ -387,6 +391,7 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
     <div class="queue-info">
       <strong>Approved Queue:</strong> ${approved.results?.length || 0} notes ready
       <br><strong>Next 5 drops:</strong> Will be filled from highest priority notes
+      <br><a href="/admin/analytics?key=${key}" style="color: #059669; text-decoration: none; font-weight: bold;">📊 View Analytics & Best Performing Notes</a>
     </div>
 
     <div class="section">
@@ -522,6 +527,143 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
         });
       }
     </script>
+
+    </body></html>
+  `;
+
+  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
+async function handleAdminAnalytics(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const key = url.searchParams.get('key');
+
+  if (key !== env.ADMIN_SECRET) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  // Get all dropped notes sorted by hearts (descending)
+  const droppedNotes = await env.DB.prepare(`
+    SELECT 
+      n.id,
+      n.text,
+      n.hearts,
+      n.dropId,
+      d.dropId as drop_date
+    FROM notes n
+    JOIN drops d ON n.dropId = d.dropId
+    ORDER BY n.hearts DESC, n.dropId DESC
+  `).all();
+
+  // Get some basic stats
+  const totalNotes = droppedNotes.results?.length || 0;
+  const totalHearts = droppedNotes.results?.reduce((sum: number, note: any) => sum + note.hearts, 0) || 0;
+  const avgHearts = totalNotes > 0 ? (totalHearts / totalNotes).toFixed(1) : '0';
+
+  // Find most popular note
+  const topNote = droppedNotes.results?.[0] || null;
+
+  const html = `
+    <!DOCTYPE html>
+    <html><head>
+    <meta charset="UTF-8">
+    <title>Analytics - Gratitude Drop</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; background: #f8fafc; }
+      .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+      .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+      .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+      .stat-number { font-size: 2rem; font-weight: bold; color: #059669; }
+      .stat-label { color: #64748b; font-size: 0.9rem; margin-top: 5px; }
+      .notes-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+      .note-item { border: 1px solid #e2e8f0; margin: 10px 0; padding: 15px; border-radius: 5px; }
+      .note-meta { display: flex; justify-content: between; align-items: center; margin-bottom: 10px; }
+      .hearts { color: #dc2626; font-weight: bold; }
+      .drop-date { color: #64748b; font-size: 0.9rem; }
+      .note-text { font-style: italic; color: #374151; line-height: 1.5; }
+      .nav-links { margin-bottom: 20px; }
+      .nav-links a { margin-right: 15px; color: #059669; text-decoration: none; }
+      .nav-links a:hover { text-decoration: underline; }
+      .top-performer { background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #f59e0b; }
+      .performance-badge { 
+        display: inline-block; 
+        padding: 2px 8px; 
+        border-radius: 12px; 
+        font-size: 0.75rem; 
+        font-weight: bold; 
+        margin-left: 10px;
+      }
+      .top-badge { background: #fbbf24; color: #92400e; }
+      .high-badge { background: #34d399; color: #065f46; }
+      .med-badge { background: #60a5fa; color: #1e3a8a; }
+      .low-badge { background: #d1d5db; color: #374151; }
+    </style></head><body>
+    
+    <div class="header">
+      <h1>📊 Gratitude Drop Analytics</h1>
+      <div class="nav-links">
+        <a href="/admin?key=${key}">&larr; Back to Admin</a>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-number">${totalNotes}</div>
+        <div class="stat-label">Total Notes Dropped</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${totalHearts}</div>
+        <div class="stat-label">Total Hearts Given</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${avgHearts}</div>
+        <div class="stat-label">Average Hearts per Note</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">${topNote ? topNote.hearts : 0}</div>
+        <div class="stat-label">Highest Hearts (Single Note)</div>
+      </div>
+    </div>
+
+    <div class="notes-section">
+      <h2>All Dropped Notes (by Hearts)</h2>
+      <p style="color: #64748b; margin-bottom: 20px;">
+        Track which stories resonate most with readers. Perfect for identifying content for future "Best Of" features.
+      </p>
+      
+      ${droppedNotes.results?.map((note: any, index: number) => {
+        let badgeClass = 'low-badge';
+        let badgeText = '';
+        
+        if (index === 0 && note.hearts > 0) {
+          badgeClass = 'top-badge';
+          badgeText = '👑 Top Performer';
+        } else if (note.hearts >= 10) {
+          badgeClass = 'high-badge';
+          badgeText = '🔥 High Engagement';
+        } else if (note.hearts >= 5) {
+          badgeClass = 'med-badge';
+          badgeText = '💙 Good Response';
+        } else if (note.hearts > 0) {
+          badgeText = '💚 Some Love';
+        }
+
+        return `
+          <div class="note-item ${index === 0 && note.hearts > 0 ? 'top-performer' : ''}">
+            <div class="note-meta">
+              <div>
+                <span class="hearts">♥ ${note.hearts}</span>
+                <span class="drop-date">• Dropped ${note.dropId}</span>
+                ${badgeText ? `<span class="performance-badge ${badgeClass}">${badgeText}</span>` : ''}
+              </div>
+            </div>
+            <div class="note-text">
+              &ldquo;${note.text.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}&rdquo;
+            </div>
+          </div>
+        `;
+      }).join('') || '<p>No notes have been dropped yet.</p>'}
+    </div>
 
     </body></html>
   `;
