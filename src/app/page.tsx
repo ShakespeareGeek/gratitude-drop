@@ -465,7 +465,7 @@ export default function Home() {
             </div>
             
             <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
-              <span>♥ {sharedNote.hearts} hearts</span>
+              <span>♥ {sharedNote.hearts} {sharedNote.hearts === 1 ? 'heart' : 'hearts'}</span>
               <span>Anonymous gratitude</span>
             </div>
             
