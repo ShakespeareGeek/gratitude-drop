@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import WelcomeModal from './WelcomeModal'
 
 export default function StreakCounter() {
   const [streak, setStreak] = useState(0)
   const [showModal, setShowModal] = useState(false)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
   useEffect(() => {
     calculateStreak()
@@ -20,6 +22,7 @@ export default function StreakCounter() {
       localStorage.setItem('lastOpenedDrop', today)
       localStorage.setItem('streak', '1')
       setStreak(1)
+      setShowWelcomeModal(true)
       return
     }
 
@@ -34,6 +37,7 @@ export default function StreakCounter() {
       localStorage.setItem('streak', newStreak.toString())
       localStorage.setItem('lastOpenedDrop', today)
       setStreak(newStreak)
+      setShowWelcomeModal(true)
     } else if (diffDays === 0) {
       // Same day
       setStreak(currentStreak)
@@ -42,6 +46,7 @@ export default function StreakCounter() {
       localStorage.setItem('streak', '1')
       localStorage.setItem('lastOpenedDrop', today)
       setStreak(1)
+      setShowWelcomeModal(true)
     }
   }
 
@@ -128,6 +133,12 @@ export default function StreakCounter() {
           </div>
         </div>
       )}
+
+      <WelcomeModal 
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        streak={streak}
+      />
     </>
   )
 }
