@@ -109,6 +109,10 @@ export default {
       if (url.pathname === '/admin/analytics') {
         return handleAdminAnalytics(request, env);
       }
+      
+      if (url.pathname === '/admin/delete-note' && request.method === 'POST') {
+        return handleDeleteNote(request, env);
+      }
 
       return new Response('Not Found', { status: 404, headers: corsHead });
     } catch (error) {
@@ -577,7 +581,7 @@ async function handleAdminAnalytics(request: Request, env: Env): Promise<Respons
       .stat-label { color: #64748b; font-size: 0.9rem; margin-top: 5px; }
       .notes-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
       .note-item { border: 1px solid #e2e8f0; margin: 10px 0; padding: 15px; border-radius: 5px; }
-      .note-meta { display: flex; justify-content: between; align-items: center; margin-bottom: 10px; }
+      .note-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
       .hearts { color: #dc2626; font-weight: bold; }
       .drop-date { color: #64748b; font-size: 0.9rem; }
       .note-text { font-style: italic; color: #374151; line-height: 1.5; }
@@ -649,12 +653,18 @@ async function handleAdminAnalytics(request: Request, env: Env): Promise<Respons
         }
 
         return `
-          <div class="note-item ${index === 0 && note.hearts > 0 ? 'top-performer' : ''}">
+          <div class="note-item ${index === 0 && note.hearts > 0 ? 'top-performer' : ''}" data-note-id="${note.id}">
             <div class="note-meta">
               <div>
                 <span class="hearts">♥ ${note.hearts}</span>
                 <span class="drop-date">• Dropped ${note.dropId}</span>
                 ${badgeText ? `<span class="performance-badge ${badgeClass}">${badgeText}</span>` : ''}
+              </div>
+              <div>
+                <button class="delete-btn" onclick="deleteNote(${note.id})" 
+                        style="background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">
+                  Delete
+                </button>
               </div>
             </div>
             <div class="note-text">
@@ -665,8 +675,91 @@ async function handleAdminAnalytics(request: Request, env: Env): Promise<Respons
       }).join('') || '<p>No notes have been dropped yet.</p>'}
     </div>
 
+    <script>
+      function deleteNote(noteId) {
+        if (!confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
+          return;
+        }
+        
+        const noteElement = document.querySelector(\`[data-note-id="\${noteId}"]\`);
+        
+        fetch('/admin/delete-note?key=${key}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteId })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Remove the note from the DOM with a fade effect
+            if (noteElement) {
+              noteElement.style.transition = 'opacity 0.3s ease-out';
+              noteElement.style.opacity = '0';
+              setTimeout(() => {
+                noteElement.remove();
+                
+                // Check if this was the last note
+                const remainingNotes = document.querySelectorAll('.note-item');
+                if (remainingNotes.length === 0) {
+                  document.querySelector('.notes-section').innerHTML = \`
+                    <h2>All Dropped Notes (by Hearts)</h2>
+                    <p style="color: #64748b; margin-bottom: 20px;">
+                      Track which stories resonate most with readers. Perfect for identifying content for future "Best Of" features.
+                    </p>
+                    <p>No notes have been dropped yet.</p>
+                  \`;
+                }
+              }, 300);
+            }
+          } else {
+            alert('Failed to delete note: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error deleting note:', error);
+          alert('Failed to delete note. Please try again.');
+        });
+      }
+    </script>
+
     </body></html>
   `;
 
   return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
+async function handleDeleteNote(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const key = url.searchParams.get('key');
+
+  if (key !== env.ADMIN_SECRET) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const { noteId } = await request.json();
+  
+  if (!noteId) {
+    return new Response(JSON.stringify({ error: 'Note ID is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    // Delete the note from the notes table
+    await env.DB.prepare('DELETE FROM notes WHERE id = ?').bind(noteId).run();
+    
+    // Clear cache for any affected drops
+    const dropId = getTodayDropId();
+    await env.CACHE.delete(`drop_${dropId}`);
+    
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Failed to delete note' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }
