@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/r/:code",
-      "destination": "/?r=:code"
-    }
-  ]
-}
