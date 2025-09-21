@@ -306,9 +306,7 @@ export default function Home() {
     // Try native sharing first (mobile), fallback to Twitter
     if (navigator.share) {
       navigator.share({
-        title: 'The Daily Gratitude Drop',
-        text: `${randomMessage}\n\n"${noteText}"`,
-        url: shareLink
+        text: `${randomMessage}\n\n"${noteText}"\n\n${shareLink} #GratitudeDrop`
       }).catch(() => {
         // Fallback to Twitter if native sharing fails
         window.open(shareUrl, '_blank')
