@@ -161,20 +161,18 @@ export default function Home() {
     const urlParams = new URLSearchParams(window.location.search)
     let noteId = urlParams.get('note')
     
-    // Check if this is a short link in the URL path
-    if (!noteId && window.location.pathname.startsWith('/r/')) {
-      const shortCode = window.location.pathname.split('/r/')[1]
-      if (shortCode) {
-        const decodedId = decodeShortCode(shortCode)
-        if (decodedId) {
-          noteId = decodedId.toString()
-          // Clean up the URL
-          window.history.replaceState({}, '', `/?note=${noteId}`)
-        } else {
-          // Invalid short code, redirect to home
-          window.history.replaceState({}, '', '/')
-          return
-        }
+    // Check if this is a short link via the rewrite parameter
+    const shortCode = urlParams.get('r')
+    if (!noteId && shortCode) {
+      const decodedId = decodeShortCode(shortCode)
+      if (decodedId) {
+        noteId = decodedId.toString()
+        // Clean up the URL
+        window.history.replaceState({}, '', `/?note=${noteId}`)
+      } else {
+        // Invalid short code, redirect to home
+        window.history.replaceState({}, '', '/')
+        return
       }
     }
     
