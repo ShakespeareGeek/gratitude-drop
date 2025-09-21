@@ -260,26 +260,34 @@ export default function Home() {
   const handleShare = (noteId: number) => {
     pauseAutoAdvance()
     
+    // Find the note being shared
+    const noteToShare = drop?.notes.find(note => note.id === noteId)
+    if (!noteToShare) return
+    
+    // Truncate note if too long for social sharing (keep room for other text)
+    const maxNoteLength = 200
+    const noteText = noteToShare.text.length > maxNoteLength 
+      ? noteToShare.text.substring(0, maxNoteLength) + "..."
+      : noteToShare.text
+    
     const shareMessages = [
-      "Ok this site is weirdly wholesome and I'm here for it →",
-      "Who knew reading about other people's good days can make yours better?",
-      "Coffee, Crossword, Gratitude. My new morning ritual →",
-      "Remind yourself what matters most →", 
-      "Pause and reflect on positive things →",
-      "Warning: gratitude may be contagious →",
-      "A moment of calm in a noisy world →"
+      "Found this beautiful gratitude note:",
+      "This made my day:",
+      "A moment of gratitude that caught my eye:",
+      "Beautiful words of gratitude:",
+      "Sometimes we all need to read this:"
     ]
     
     const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
     const shareLink = `https://www.gratitudedrop.com?note=${noteId}`
-    const fullShareText = `${randomMessage} ${shareLink} #GratitudeDrop`
+    const fullShareText = `${randomMessage}\n\n"${noteText}"\n\n${shareLink} #GratitudeDrop`
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(fullShareText)}`
     
     // Try native sharing first (mobile), fallback to Twitter
     if (navigator.share) {
       navigator.share({
         title: 'The Daily Gratitude Drop',
-        text: randomMessage,
+        text: `${randomMessage}\n\n"${noteText}"`,
         url: shareLink
       }).catch(() => {
         // Fallback to Twitter if native sharing fails
