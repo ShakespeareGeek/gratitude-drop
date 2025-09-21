@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import SubmissionModal from '../components/SubmissionModal'
 import StreakCounter from '../components/StreakCounter'
+import { encodeNoteId, decodeShortCode } from '../utils/shortLink'
 
 interface Note {
   id: number
@@ -158,7 +159,24 @@ export default function Home() {
 
   const checkSharedNote = async () => {
     const urlParams = new URLSearchParams(window.location.search)
-    const noteId = urlParams.get('note')
+    let noteId = urlParams.get('note')
+    
+    // Check if this is a short link in the URL path
+    if (!noteId && window.location.pathname.startsWith('/r/')) {
+      const shortCode = window.location.pathname.split('/r/')[1]
+      if (shortCode) {
+        const decodedId = decodeShortCode(shortCode)
+        if (decodedId) {
+          noteId = decodedId.toString()
+          // Clean up the URL
+          window.history.replaceState({}, '', `/?note=${noteId}`)
+        } else {
+          // Invalid short code, redirect to home
+          window.history.replaceState({}, '', '/')
+          return
+        }
+      }
+    }
     
     if (noteId) {
       try {
@@ -279,7 +297,8 @@ export default function Home() {
     ]
     
     const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
-    const shareLink = `https://www.gratitudedrop.com?note=${noteId}`
+    const shortCode = encodeNoteId(noteId)
+    const shareLink = `https://www.gratitudedrop.com/r/${shortCode}`
     const fullShareText = `${randomMessage}\n\n"${noteText}"\n\n${shareLink} #GratitudeDrop`
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(fullShareText)}`
     
