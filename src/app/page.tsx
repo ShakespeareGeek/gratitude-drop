@@ -290,12 +290,14 @@ export default function Home() {
       : noteToShare.text
     
     const shareMessages = [
-      "Found this beautiful gratitude note:",
-      "This made my day:",
-      "A moment of gratitude that caught my eye:",
-      "Beautiful words of gratitude:",
-      "Sometimes we all need to read this:"
-    ]
+      "Ok this site is weirdly wholesome and I'm here for it →",
+      "Who knew reading about other people's good days can make yours better?",
+      "Coffee, Crossword, Gratitude. My new morning ritual →",
+      "Remind yourself what matters most →", 
+      "Pause and reflect on positive things →",
+      "Warning: gratitude may be contagious →",
+      "A moment of calm in a noisy world →" 
+     ]
     
     const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
     const shortCode = encodeNoteId(noteId)
