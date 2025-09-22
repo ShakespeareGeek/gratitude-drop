@@ -94,6 +94,10 @@ export default {
         return handleHeart(request, env, corsHead);
       }
       
+      if (url.pathname === '/api/unheart' && request.method === 'POST') {
+        return handleUnheart(request, env, corsHead);
+      }
+      
       if (url.pathname === '/api/submit' && request.method === 'POST') {
         return handleSubmit(request, env, corsHead);
       }
@@ -189,6 +193,21 @@ async function handleHeart(request: Request, env: Env, corsHead: HeadersInit): P
   const { noteId } = await request.json();
   
   await env.DB.prepare('UPDATE notes SET hearts = hearts + 1 WHERE id = ?')
+    .bind(noteId).run();
+
+  const dropId = getTodayDropId();
+  await env.CACHE.delete(`drop_${dropId}`);
+
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { ...corsHead, 'Content-Type': 'application/json' }
+  });
+}
+
+async function handleUnheart(request: Request, env: Env, corsHead: HeadersInit): Promise<Response> {
+  const { noteId } = await request.json();
+  
+  // Make sure hearts doesn't go below 0
+  await env.DB.prepare('UPDATE notes SET hearts = MAX(0, hearts - 1) WHERE id = ?')
     .bind(noteId).run();
 
   const dropId = getTodayDropId();

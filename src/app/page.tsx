@@ -216,28 +216,52 @@ export default function Home() {
   }
 
   const handleHeart = async (noteId: number) => {
-    if (likedNotes.has(noteId)) return
-
     pauseAutoAdvance()
     
+    const isLiked = likedNotes.has(noteId)
+    
     try {
-      await fetch(`${API_BASE}/api/heart`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ noteId })
-      })
+      if (isLiked) {
+        // Unlike the note
+        await fetch(`${API_BASE}/api/unheart`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteId })
+        })
 
-      localStorage.setItem(`liked_${noteId}`, 'true')
-      setLikedNotes(prev => new Set([...prev, noteId]))
-      
-      setDrop(prev => prev ? {
-        ...prev,
-        notes: prev.notes.map(note => 
-          note.id === noteId ? { ...note, hearts: note.hearts + 1 } : note
-        )
-      } : null)
+        localStorage.removeItem(`liked_${noteId}`)
+        setLikedNotes(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(noteId)
+          return newSet
+        })
+        
+        setDrop(prev => prev ? {
+          ...prev,
+          notes: prev.notes.map(note => 
+            note.id === noteId ? { ...note, hearts: Math.max(0, note.hearts - 1) } : note
+          )
+        } : null)
+      } else {
+        // Like the note
+        await fetch(`${API_BASE}/api/heart`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteId })
+        })
+
+        localStorage.setItem(`liked_${noteId}`, 'true')
+        setLikedNotes(prev => new Set([...prev, noteId]))
+        
+        setDrop(prev => prev ? {
+          ...prev,
+          notes: prev.notes.map(note => 
+            note.id === noteId ? { ...note, hearts: note.hearts + 1 } : note
+          )
+        } : null)
+      }
     } catch (error) {
-      console.error('Failed to heart note:', error)
+      console.error('Failed to toggle heart:', error)
     }
   }
 
@@ -368,12 +392,12 @@ export default function Home() {
                 <div className="flex items-center justify-between mt-8">
                   <button
                     onClick={() => handleHeart(drop.notes[currentNoteIndex].id)}
-                    disabled={likedNotes.has(drop.notes[currentNoteIndex].id)}
                     className={`flex items-center space-x-2 transition-colors ${
                       likedNotes.has(drop.notes[currentNoteIndex].id)
-                        ? 'text-red-400 cursor-not-allowed' 
+                        ? 'text-red-500 hover:text-red-400' 
                         : 'text-slate-400 hover:text-red-500'
                     }`}
+                    title={likedNotes.has(drop.notes[currentNoteIndex].id) ? 'Unlike this note' : 'Like this note'}
                   >
                     <span className="text-2xl">♥</span>
                     <span className="font-medium text-lg">{drop.notes[currentNoteIndex].hearts}</span>
