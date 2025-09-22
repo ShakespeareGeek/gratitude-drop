@@ -161,21 +161,18 @@ export default function Home() {
     const urlParams = new URLSearchParams(window.location.search)
     let noteId = urlParams.get('note')
     
-    // Check if this is a short link in the hash
-    const hash = window.location.hash
-    if (!noteId && hash.startsWith('#r/')) {
-      const shortCode = hash.split('#r/')[1]
-      if (shortCode) {
-        const decodedId = decodeShortCode(shortCode)
-        if (decodedId) {
-          noteId = decodedId.toString()
-          // Clean up the URL
-          window.history.replaceState({}, '', `/?note=${noteId}`)
-        } else {
-          // Invalid short code, redirect to home
-          window.history.replaceState({}, '', '/')
-          return
-        }
+    // Check if this is a short link via the r parameter
+    const shortCode = urlParams.get('r')
+    if (!noteId && shortCode) {
+      const decodedId = decodeShortCode(shortCode)
+      if (decodedId) {
+        noteId = decodedId.toString()
+        // Clean up the URL
+        window.history.replaceState({}, '', `/?note=${noteId}`)
+      } else {
+        // Invalid short code, redirect to home
+        window.history.replaceState({}, '', '/')
+        return
       }
     }
     
@@ -301,7 +298,7 @@ export default function Home() {
     
     const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
     const shortCode = encodeNoteId(noteId)
-    const shareLink = `https://www.gratitudedrop.com/#r/${shortCode}`
+    const shareLink = `https://www.gratitudedrop.com/?r=${shortCode}`
     const fullShareText = `${randomMessage}\n\n"${noteText}"\n\n${shareLink} #GratitudeDrop`
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(fullShareText)}`
     
