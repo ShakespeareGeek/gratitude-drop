@@ -205,12 +205,19 @@ export default function Home() {
 
   const loadLikedNotes = () => {
     const liked = new Set<number>()
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('liked_')) {
-        const noteId = parseInt(key.replace('liked_', ''))
-        if (!isNaN(noteId)) liked.add(noteId)
-      }
+    try {
+      // More robust way to iterate localStorage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('liked_')) {
+          const noteIdStr = key.replace('liked_', '')
+          const noteId = parseInt(noteIdStr, 10)
+          if (!isNaN(noteId) && noteId > 0) {
+            liked.add(noteId)
+          }
+        }
+      })
+    } catch (error) {
+      console.error('Error loading liked notes:', error)
     }
     setLikedNotes(liked)
   }
@@ -218,7 +225,9 @@ export default function Home() {
   const handleHeart = async (noteId: number) => {
     pauseAutoAdvance()
     
-    const isLiked = likedNotes.has(noteId)
+    // Ensure we're working with a number
+    const numericNoteId = Number(noteId)
+    const isLiked = likedNotes.has(numericNoteId)
     
     try {
       if (isLiked) {
@@ -226,20 +235,20 @@ export default function Home() {
         await fetch(`${API_BASE}/api/unheart`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ noteId })
+          body: JSON.stringify({ noteId: numericNoteId })
         })
 
-        localStorage.removeItem(`liked_${noteId}`)
+        localStorage.removeItem(`liked_${numericNoteId}`)
         setLikedNotes(prev => {
           const newSet = new Set(prev)
-          newSet.delete(noteId)
+          newSet.delete(numericNoteId)
           return newSet
         })
         
         setDrop(prev => prev ? {
           ...prev,
           notes: prev.notes.map(note => 
-            note.id === noteId ? { ...note, hearts: Math.max(0, note.hearts - 1) } : note
+            Number(note.id) === numericNoteId ? { ...note, hearts: Math.max(0, note.hearts - 1) } : note
           )
         } : null)
       } else {
@@ -247,16 +256,16 @@ export default function Home() {
         await fetch(`${API_BASE}/api/heart`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ noteId })
+          body: JSON.stringify({ noteId: numericNoteId })
         })
 
-        localStorage.setItem(`liked_${noteId}`, 'true')
-        setLikedNotes(prev => new Set([...prev, noteId]))
+        localStorage.setItem(`liked_${numericNoteId}`, 'true')
+        setLikedNotes(prev => new Set([...prev, numericNoteId]))
         
         setDrop(prev => prev ? {
           ...prev,
           notes: prev.notes.map(note => 
-            note.id === noteId ? { ...note, hearts: note.hearts + 1 } : note
+            Number(note.id) === numericNoteId ? { ...note, hearts: note.hearts + 1 } : note
           )
         } : null)
       }
@@ -393,11 +402,11 @@ export default function Home() {
                   <button
                     onClick={() => handleHeart(drop.notes[currentNoteIndex].id)}
                     className={`flex items-center space-x-2 transition-colors ${
-                      likedNotes.has(drop.notes[currentNoteIndex].id)
+                      likedNotes.has(Number(drop.notes[currentNoteIndex].id))
                         ? 'text-red-500 hover:text-red-400' 
                         : 'text-slate-400 hover:text-red-500'
                     }`}
-                    title={likedNotes.has(drop.notes[currentNoteIndex].id) ? 'Unlike this note' : 'Like this note'}
+                    title={likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Unlike this note' : 'Like this note'}
                   >
                     <span className="text-2xl">♥</span>
                     <span className="font-medium text-lg">{drop.notes[currentNoteIndex].hearts}</span>
