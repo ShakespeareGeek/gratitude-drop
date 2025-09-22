@@ -63,10 +63,10 @@ export default function WelcomeModal({ isOpen, onClose, streak }: WelcomeModalPr
 
     const streakMessages = [
       {
-        title: "Day 1! Welcome! 🌱",
-        subtitle: "You've started something beautiful",
-        body: "This is the beginning of a gratitude journey that could transform how you see the world. Every day you return, you're training your mind to notice what's good.",
-        cta: "Start my journey"
+        title: "Every day is a fresh start 🌱",
+        subtitle: "Today begins a beautiful habit",
+        body: "Whether this is your first time here or you're beginning again, today is the perfect day to focus on gratitude. Every moment is a chance to notice what's good in your world.",
+        cta: "Begin today"
       },
       {
         title: `${streak} days strong! 🔥`,
