@@ -207,14 +207,21 @@ export default function Home() {
     const liked = new Set<number>()
     try {
       // More robust way to iterate localStorage
+      const likedKeys: string[] = []
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith('liked_')) {
+          likedKeys.push(key)
           const noteIdStr = key.replace('liked_', '')
           const noteId = parseInt(noteIdStr, 10)
           if (!isNaN(noteId) && noteId > 0) {
             liked.add(noteId)
           }
         }
+      })
+      console.log('🔍 DEBUG: Loaded liked notes from localStorage:', {
+        keys: likedKeys,
+        likedSet: Array.from(liked),
+        allLocalStorageKeys: Object.keys(localStorage)
       })
     } catch (error) {
       console.error('Error loading liked notes:', error)
@@ -399,18 +406,33 @@ export default function Home() {
                 </div>
                 
                 <div className="flex items-center justify-between mt-8">
-                  <button
-                    onClick={() => handleHeart(drop.notes[currentNoteIndex].id)}
-                    className={`flex items-center space-x-2 transition-colors ${
-                      likedNotes.has(Number(drop.notes[currentNoteIndex].id))
-                        ? 'text-red-500 hover:text-red-400' 
-                        : 'text-slate-400 hover:text-red-500'
-                    }`}
-                    title={likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Unlike this note' : 'Like this note'}
-                  >
-                    <span className="text-2xl">♥</span>
-                    <span className="font-medium text-lg">{drop.notes[currentNoteIndex].hearts}</span>
-                  </button>
+                  {(() => {
+                    const currentNote = drop.notes[currentNoteIndex]
+                    const noteId = Number(currentNote.id)
+                    const isLiked = likedNotes.has(noteId)
+                    console.log('🔍 DEBUG: Heart button render:', {
+                      currentNoteIndex,
+                      noteId,
+                      originalId: currentNote.id,
+                      isLiked,
+                      likedNotesArray: Array.from(likedNotes),
+                      likedNotesSize: likedNotes.size
+                    })
+                    return (
+                      <button
+                        onClick={() => handleHeart(currentNote.id)}
+                        className={`flex items-center space-x-2 transition-colors ${
+                          isLiked
+                            ? 'text-red-500 hover:text-red-400' 
+                            : 'text-slate-400 hover:text-red-500'
+                        }`}
+                        title={isLiked ? 'Unlike this note' : 'Like this note'}
+                      >
+                        <span className="text-2xl">♥</span>
+                        <span className="font-medium text-lg">{currentNote.hearts}</span>
+                      </button>
+                    )
+                  })()}
                   
                   <button
                     onClick={() => handleShare(drop.notes[currentNoteIndex].id)}
