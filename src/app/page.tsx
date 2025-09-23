@@ -476,7 +476,7 @@ export default function Home() {
             onClick={() => setShowModal(true)}
             className="bg-slate-700 hover:bg-slate-800 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg"
           >
-            What are you grateful for?
+            Add your note
           </button>
         </div>
 
