@@ -481,12 +481,17 @@ export default function Home() {
         </div>
 
         <div className="text-center pb-16">
-          <a 
-            href="mailto:feedback@gratitudedrop.com"
-            className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            feedback@gratitudedrop.com
-          </a>
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mx-auto max-w-sm">
+            <p className="text-sm text-slate-600 mb-2">
+              <strong>Have feedback or ideas?</strong>
+            </p>
+            <a 
+              href="mailto:feedback@gratitudedrop.com"
+              className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+            >
+              feedback@gratitudedrop.com
+            </a>
+          </div>
         </div>
       </div>
 

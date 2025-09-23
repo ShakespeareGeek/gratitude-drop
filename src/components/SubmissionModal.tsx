@@ -64,8 +64,8 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
             </div>
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-emerald-800">
-                <strong>Notes are collected and curated</strong> for future drops. We review each submission to maintain quality and kindness. Please keep your gratitude genuine and respectful.
+              <p className="text-sm text-emerald-800 mb-2">
+                <strong>Share your story!</strong> The most meaningful notes tell us why something matters to you. You have plenty of space (280 characters) to paint a picture.
               </p>
             </div>
 
@@ -74,13 +74,28 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="I'm grateful for..."
-                  className="w-full h-32 p-3 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="w-full h-40 p-3 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   maxLength={280}
                   disabled={submitting}
                 />
-                <div className="text-right text-sm text-slate-400 mt-1">
-                  {text.length}/280
+                <div className="flex justify-between items-center text-sm mt-1">
+                  <div className="text-slate-500">
+                    {text.length < 30 && text.length > 0 && (
+                      <span className="text-emerald-600">✨ Tell us more! What makes this special?</span>
+                    )}
+                    {text.length >= 30 && text.length < 100 && (
+                      <span className="text-emerald-600">🌟 Great start! Keep painting the picture...</span>
+                    )}
+                    {text.length >= 100 && text.length < 200 && (
+                      <span className="text-emerald-600">💚 Beautiful! You're capturing the feeling...</span>
+                    )}
+                    {text.length >= 200 && (
+                      <span className="text-emerald-600">🎉 Perfect! This will touch hearts.</span>
+                    )}
+                  </div>
+                  <div className={`${text.length > 260 ? 'text-amber-600' : 'text-slate-400'}`}>
+                    {text.length}/280
+                  </div>
                 </div>
               </div>
 
