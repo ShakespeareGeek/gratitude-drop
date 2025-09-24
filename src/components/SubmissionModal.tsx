@@ -12,12 +12,14 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!text.trim() || text.length > 280) return
 
     setSubmitting(true)
+    setError('')
     try {
       const res = await fetch(`${apiBase}/api/submit`, {
         method: 'POST',
@@ -32,9 +34,20 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
           setSubmitted(false)
           onClose()
         }, 2000)
+      } else {
+        // Handle specific error responses
+        const errorData = await res.json().catch(() => ({}))
+        if (res.status === 429) {
+          setError('You can submit up to 5 notes per hour. Please try again later!')
+        } else if (errorData.error) {
+          setError(errorData.error)
+        } else {
+          setError('Something went wrong. Please try again.')
+        }
       }
     } catch (error) {
       console.error('Failed to submit:', error)
+      setError('Network error. Please check your connection and try again.')
     } finally {
       setSubmitting(false)
     }
@@ -98,6 +111,12 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
                   </div>
                 </div>
               </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                  <p className="text-red-800 text-sm font-medium">{error}</p>
+                </div>
+              )}
 
               <div className="flex justify-end space-x-3">
                 <button
