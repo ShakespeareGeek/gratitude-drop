@@ -5,6 +5,13 @@ import SubmissionModal from '../components/SubmissionModal'
 import StreakCounter from '../components/StreakCounter'
 import { encodeNoteId, decodeShortCode } from '../utils/shortLink'
 
+// Extend Window interface for Plausible
+declare global {
+  interface Window {
+    plausible?: (event: string) => void
+  }
+}
+
 interface Note {
   id: number
   text: string
@@ -228,6 +235,11 @@ export default function Home() {
     const numericNoteId = Number(noteId)
     const isLiked = likedNotes.has(numericNoteId)
     
+    // Track analytics
+    if (typeof window !== 'undefined' && window.plausible) {
+      window.plausible(isLiked ? 'Unheart Click' : 'Heart Click')
+    }
+    
     try {
       if (isLiked) {
         // Unlike the note
@@ -290,6 +302,11 @@ export default function Home() {
     if (drop?.notes && currentNoteIndex < drop.notes.length - 1) {
       setCurrentNoteIndex(currentNoteIndex + 1)
       pauseAutoAdvance(true) // Permanently disable auto-advance
+      
+      // Track analytics
+      if (typeof window !== 'undefined' && window.plausible) {
+        window.plausible('Next Note')
+      }
     }
   }
 
@@ -297,6 +314,11 @@ export default function Home() {
     if (currentNoteIndex > 0) {
       setCurrentNoteIndex(currentNoteIndex - 1)
       pauseAutoAdvance(true) // Permanently disable auto-advance
+      
+      // Track analytics
+      if (typeof window !== 'undefined' && window.plausible) {
+        window.plausible('Previous Note')
+      }
     }
   }
 
@@ -307,6 +329,11 @@ export default function Home() {
 
   const handleShare = (noteId: number) => {
     pauseAutoAdvance()
+    
+    // Track analytics
+    if (typeof window !== 'undefined' && window.plausible) {
+      window.plausible('Share Note')
+    }
     
     // Find the note being shared
     const noteToShare = drop?.notes.find(note => note.id === noteId)
@@ -473,7 +500,13 @@ export default function Home() {
 
         <div className="text-center pb-12">
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setShowModal(true)
+              // Track analytics
+              if (typeof window !== 'undefined' && window.plausible) {
+                window.plausible('Submit Note Click')
+              }
+            }}
             className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg inline-flex items-center space-x-2"
           >
             <span>Submit your own note</span>
@@ -488,6 +521,12 @@ export default function Home() {
             </p>
             <a 
               href="mailto:feedback@gratitudedrop.com"
+              onClick={() => {
+                // Track analytics
+                if (typeof window !== 'undefined' && window.plausible) {
+                  window.plausible('Feedback Email Click')
+                }
+              }}
               className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
             >
               feedback@gratitudedrop.com

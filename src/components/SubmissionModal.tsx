@@ -2,6 +2,13 @@
 
 import { useState } from 'react'
 
+// Extend Window interface for Plausible
+declare global {
+  interface Window {
+    plausible?: (event: string) => void
+  }
+}
+
 interface SubmissionModalProps {
   isOpen: boolean
   onClose: () => void
@@ -30,6 +37,10 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
       if (res.ok) {
         setSubmitted(true)
         setText('')
+        // Track analytics
+        if (typeof window !== 'undefined' && window.plausible) {
+          window.plausible('Note Submitted')
+        }
         setTimeout(() => {
           setSubmitted(false)
           onClose()
