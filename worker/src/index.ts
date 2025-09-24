@@ -380,7 +380,9 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
   const pending = await env.DB.prepare('SELECT * FROM submissions WHERE status = ? ORDER BY created DESC LIMIT ? OFFSET ?')
     .bind('pending', perPage, offset).all();
   
-  const approved = await env.DB.prepare('SELECT * FROM submissions WHERE status = ? ORDER BY sort_order ASC LIMIT 20').bind('approved').all();
+  const approvedCount = await env.DB.prepare('SELECT COUNT(*) as count FROM submissions WHERE status = ?').bind('approved').first();
+  const totalApproved = approvedCount?.count || 0;
+  const approved = await env.DB.prepare('SELECT * FROM submissions WHERE status = ? ORDER BY sort_order ASC LIMIT 50').bind('approved').all();
   
   const totalPending = pendingCount?.count || 0;
   const totalPages = Math.ceil(totalPending / perPage);
@@ -447,8 +449,14 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
     </div>
 
     <div class="section">
-      <h2>Approved Queue (${approved.results?.length || 0}) - Drag to Reorder</h2>
+      <h2>Approved Queue (${approved.results?.length || 0}${totalApproved > 50 ? ` of ${totalApproved}` : ''}) - Drag to Reorder</h2>
       <p style="color: #666; font-size: 14px;">Drag notes up/down to prioritize them. Top notes will appear in drops first.</p>
+      ${totalApproved > 50 ? `
+        <div style="background: #fef3cd; border: 1px solid #f59e0b; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+          <strong style="color: #b45309;">⚠️ Warning:</strong> You have ${totalApproved} approved notes, but only showing the first 50. 
+          Consider using some notes for drops or archiving older ones to keep the queue manageable.
+        </div>
+      ` : ''}
       
       <div id="approved-list">
         ${approved.results?.map((sub: any, index: number) => `
