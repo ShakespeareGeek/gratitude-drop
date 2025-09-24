@@ -470,7 +470,11 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
                   <small>Approved: ${new Date(sub.created).toLocaleDateString()}</small>
                 </div>
               </div>
-              <div style="margin-left: 15px;">
+              <div style="margin-left: 15px; display: flex; gap: 5px;">
+                <button onclick="copyToClipboard('${sub.text.replace(/'/g, '\\\'').replace(/"/g, '\\"')}')" 
+                        style="font-size: 12px; padding: 3px 8px; background: #059669; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                  Copy
+                </button>
                 <a href="?key=${key}&action=unapprove&id=${sub.id}" 
                    class="reject" 
                    onclick="return confirm('Move this note back to pending?')"
@@ -486,6 +490,29 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 
     <script>
       let draggedElement = null;
+      
+      function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+          // Show a brief success message
+          const button = event.target;
+          const originalText = button.textContent;
+          button.textContent = '✓ Copied!';
+          button.style.background = '#10b981';
+          setTimeout(() => {
+            button.textContent = originalText;
+            button.style.background = '#059669';
+          }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy: ', err);
+          // Fallback for older browsers
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        });
+      }
       
       const approvedList = document.getElementById('approved-list');
       if (approvedList) {
