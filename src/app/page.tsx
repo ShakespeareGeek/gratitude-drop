@@ -327,116 +327,6 @@ export default function Home() {
     pauseAutoAdvance(true) // Permanently disable auto-advance
   }
 
-  const handleDownloadImage = async (note: Note) => {
-    pauseAutoAdvance()
-    
-    // Track analytics
-    if (typeof window !== 'undefined') {
-      window.plausible?.('Download Image')
-    }
-    
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    
-    // Set canvas size (1080x1080 for Instagram)
-    const size = 1080
-    canvas.width = size
-    canvas.height = size
-    
-    // Background gradient (soft green to white)
-    const gradient = ctx.createLinearGradient(0, 0, 0, size)
-    gradient.addColorStop(0, '#f0fdf4') // emerald-50
-    gradient.addColorStop(1, '#ffffff') // white
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, size, size)
-    
-    // Add title at top
-    ctx.fillStyle = '#374151' // slate-700
-    ctx.textAlign = 'center'
-    ctx.font = '32px sans-serif'
-    ctx.fillText('What Are You Grateful For Today?', size / 2, 120)
-    
-    // Set up quote text styling
-    ctx.fillStyle = '#1f2937' // slate-800 (darker for quote)
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    
-    // Calculate font size based on text length (reserve space for title)
-    const maxTextWidth = size * 0.8 // 80% of canvas width
-    const availableHeight = size - 300 // Reserve space for title and branding
-    let fontSize = 52
-    const maxFontSize = 72
-    const minFontSize = 36
-    
-    // Use a more elegant font stack
-    const fancyFont = `${fontSize}px "Times New Roman", "Georgia", serif`
-    ctx.font = fancyFont
-    let textWidth = ctx.measureText(note.text).width
-    
-    while (textWidth > maxTextWidth && fontSize > minFontSize) {
-      fontSize -= 2
-      ctx.font = `${fontSize}px "Times New Roman", "Georgia", serif`
-      textWidth = ctx.measureText(note.text).width
-    }
-    
-    // Draw the quote text (with word wrapping)
-    const words = note.text.split(' ')
-    const lines: string[] = []
-    let currentLine = ''
-    
-    for (const word of words) {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word
-      const testWidth = ctx.measureText(testLine).width
-      
-      if (testWidth > maxTextWidth && currentLine) {
-        lines.push(currentLine)
-        currentLine = word
-      } else {
-        currentLine = testLine
-      }
-    }
-    if (currentLine) lines.push(currentLine)
-    
-    // Draw the text lines centered (accounting for title space)
-    const lineHeight = fontSize * 1.4
-    const totalTextHeight = lines.length * lineHeight
-    const contentAreaStart = 180 // After title
-    const contentAreaEnd = size - 120 // Before branding
-    const availableSpace = contentAreaEnd - contentAreaStart
-    const startY = contentAreaStart + (availableSpace - totalTextHeight) / 2 + lineHeight / 2
-    
-    lines.forEach((line, index) => {
-      ctx.fillText(line, size / 2, startY + (index * lineHeight))
-    })
-    
-    // Add branding at the bottom
-    ctx.font = '24px sans-serif'
-    ctx.fillStyle = '#6b7280' // gray-500
-    ctx.fillText('gratitudedrop.com', size / 2, size - 60)
-    
-    // Add subtle quote marks
-    ctx.font = '72px serif'
-    ctx.fillStyle = '#d1d5db' // gray-300
-    ctx.textAlign = 'left'
-    ctx.fillText('"', 120, startY - 40)
-    ctx.textAlign = 'right'  
-    ctx.fillText('"', size - 120, startY + totalTextHeight + 20)
-    
-    // Download the image
-    canvas.toBlob((blob) => {
-      if (!blob) return
-      
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `gratitude-note-${note.id}.png`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    }, 'image/png', 0.9)
-  }
 
   const handleShare = (noteId: number) => {
     pauseAutoAdvance()
@@ -549,24 +439,13 @@ export default function Home() {
                     <span className="font-medium text-lg">{drop.notes[currentNoteIndex].hearts}</span>
                   </button>
                   
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => handleShare(drop.notes[currentNoteIndex].id)}
-                      className="flex items-center space-x-2 text-slate-400 hover:text-emerald-500 transition-colors"
-                    >
-                      <span className="text-xl">↗</span>
-                      <span className="font-medium">Share this note</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => handleDownloadImage(drop.notes[currentNoteIndex])}
-                      className="flex items-center space-x-2 text-slate-400 hover:text-emerald-500 transition-colors"
-                      title="Download as image"
-                    >
-                      <span className="text-xl">📷</span>
-                      <span className="font-medium">Save image</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => handleShare(drop.notes[currentNoteIndex].id)}
+                    className="flex items-center space-x-2 text-slate-400 hover:text-emerald-500 transition-colors"
+                  >
+                    <span className="text-xl">↗</span>
+                    <span className="font-medium">Share this note</span>
+                  </button>
                 </div>
               </div>
 
