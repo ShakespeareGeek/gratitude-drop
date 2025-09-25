@@ -38,8 +38,8 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
         setSubmitted(true)
         setText('')
         // Track analytics
-        if (typeof window !== 'undefined' && window.plausible) {
-          window.plausible('Note Submitted')
+        if (typeof window !== 'undefined') {
+          window.plausible?.('Note Submitted')
         }
         setTimeout(() => {
           setSubmitted(false)
