@@ -33,3 +33,6 @@ yarn-error.log*
 worker/.wrangler/
 worker/dist/
 worker/wrangler.toml
+
+# Claude Code context (for session persistence)
+CLAUDE.md
