@@ -2,11 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import WelcomeModal from './WelcomeModal'
+import CalendarReminderModal from './CalendarReminderModal'
+
+// Extend Window interface for Plausible
+declare global {
+  interface Window {
+    plausible?: (event: string) => void
+  }
+}
 
 export default function StreakCounter() {
   const [streak, setStreak] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [showCalendarModal, setShowCalendarModal] = useState(false)
 
   useEffect(() => {
     calculateStreak()
@@ -84,15 +93,32 @@ export default function StreakCounter() {
 
   return (
     <>
-      <button
-        onClick={() => setShowModal(true)}
-        className="absolute top-4 right-4 bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 border border-slate-200 transition-all hover:scale-105 cursor-pointer"
-      >
-        <div className="flex items-center space-x-2">
-          <span className="text-emerald-600">🔥</span>
-          <span className="font-medium text-slate-700">{streak}</span>
-        </div>
-      </button>
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        {/* Streak counter button */}
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 border border-slate-200 transition-all hover:scale-105 cursor-pointer"
+        >
+          <div className="flex items-center space-x-2">
+            <span className="text-emerald-600">🔥</span>
+            <span className="font-medium text-slate-700">{streak}</span>
+          </div>
+        </button>
+
+        {/* Calendar reminder button */}
+        <button
+          onClick={() => {
+            setShowCalendarModal(true)
+            if (typeof window !== 'undefined') {
+              window.plausible?.('Calendar Modal Open')
+            }
+          }}
+          className="bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full p-3 border border-slate-200 transition-all hover:scale-105 cursor-pointer"
+          title="Set daily reminders"
+        >
+          <span className="text-blue-600">📅</span>
+        </button>
+      </div>
 
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -138,6 +164,11 @@ export default function StreakCounter() {
         isOpen={showWelcomeModal}
         onClose={() => setShowWelcomeModal(false)}
         streak={streak}
+      />
+
+      <CalendarReminderModal 
+        isOpen={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
       />
     </>
   )
