@@ -32,6 +32,11 @@ export default function StreakCounter() {
       localStorage.setItem('streak', '1')
       setStreak(1)
       setShowWelcomeModal(true)
+      
+      // Track new user
+      if (typeof window !== 'undefined') {
+        window.plausible?.('Streak Day 1')
+      }
       return
     }
 
@@ -47,6 +52,11 @@ export default function StreakCounter() {
       localStorage.setItem('lastOpenedDrop', today)
       setStreak(newStreak)
       setShowWelcomeModal(true)
+      
+      // Track streak milestone
+      if (typeof window !== 'undefined') {
+        window.plausible?.(`Streak Day ${newStreak}`)
+      }
     } else if (diffDays === 0) {
       // Same day
       setStreak(currentStreak)
@@ -56,6 +66,12 @@ export default function StreakCounter() {
       localStorage.setItem('lastOpenedDrop', today)
       setStreak(1)
       setShowWelcomeModal(true)
+      
+      // Track streak restart (and what they lost)
+      if (typeof window !== 'undefined') {
+        window.plausible?.(`Streak Broken - Was ${currentStreak}`)
+        window.plausible?.('Streak Day 1')
+      }
     }
   }
 
