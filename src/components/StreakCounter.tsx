@@ -112,7 +112,12 @@ export default function StreakCounter() {
       <div className="absolute top-4 right-4 flex items-center space-x-2">
         {/* Streak counter button */}
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setShowModal(true)
+            if (typeof window !== 'undefined') {
+              window.plausible?.('Streak Modal Open')
+            }
+          }}
           className="bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 border border-slate-200 transition-all hover:scale-105 cursor-pointer"
         >
           <div className="flex items-center space-x-2">

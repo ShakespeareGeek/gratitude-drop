@@ -117,6 +117,10 @@ export default {
       if (url.pathname === '/admin/delete-note' && request.method === 'POST') {
         return handleDeleteNote(request, env);
       }
+      
+      if (url.pathname === '/admin/recycle-note' && request.method === 'POST') {
+        return handleRecycleNote(request, env);
+      }
 
       return new Response('Not Found', { status: 404, headers: corsHead });
     } catch (error) {
@@ -714,7 +718,12 @@ async function handleAdminAnalytics(request: Request, env: Env): Promise<Respons
                 <span class="drop-date">• Dropped ${note.dropId}</span>
                 ${badgeText ? `<span class="performance-badge ${badgeClass}">${badgeText}</span>` : ''}
               </div>
-              <div>
+              <div style="display: flex; gap: 5px;">
+                <button onclick="recycleNote(${note.id})" 
+                        style="background: #059669; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 12px; cursor: pointer;"
+                        title="Move back to approved queue">
+                  Recycle
+                </button>
                 <button class="delete-btn" onclick="deleteNote(${note.id})" 
                         style="background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 12px; cursor: pointer;">
                   Delete
@@ -774,6 +783,54 @@ async function handleAdminAnalytics(request: Request, env: Env): Promise<Respons
           alert('Failed to delete note. Please try again.');
         });
       }
+      
+      function recycleNote(noteId) {
+        if (!confirm('Move this note back to the approved queue? It will appear in future drops.')) {
+          return;
+        }
+        
+        const noteElement = document.querySelector(\`[data-note-id="\${noteId}"]\`);
+        
+        fetch('/admin/recycle-note?key=${key}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteId })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Remove the note from the DOM with a fade effect
+            if (noteElement) {
+              noteElement.style.transition = 'opacity 0.3s ease-out';
+              noteElement.style.opacity = '0';
+              setTimeout(() => {
+                noteElement.remove();
+                
+                // Check if this was the last note
+                const remainingNotes = document.querySelectorAll('.note-item');
+                if (remainingNotes.length === 0) {
+                  document.querySelector('.notes-section').innerHTML = \`
+                    <h2>All Dropped Notes (by Hearts)</h2>
+                    <p style="color: #64748b; margin-bottom: 20px;">
+                      Track which stories resonate most with readers. Perfect for identifying content for future "Best Of" features.
+                    </p>
+                    <p>No notes have been dropped yet.</p>
+                  \`;
+                }
+              }, 300);
+            }
+            
+            // Show success message
+            alert('Note recycled successfully! It has been added back to the approved queue.');
+          } else {
+            alert('Failed to recycle note: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error recycling note:', error);
+          alert('Failed to recycle note. Please try again.');
+        });
+      }
     </script>
 
     </body></html>
@@ -812,6 +869,60 @@ async function handleDeleteNote(request: Request, env: Env): Promise<Response> {
     });
   } catch (error) {
     return new Response(JSON.stringify({ error: 'Failed to delete note' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+async function handleRecycleNote(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const key = url.searchParams.get('key');
+
+  if (key !== env.ADMIN_SECRET) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  const { noteId } = await request.json();
+  
+  if (!noteId) {
+    return new Response(JSON.stringify({ error: 'Note ID is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    // Get the note details first
+    const note = await env.DB.prepare('SELECT id, text FROM notes WHERE id = ?').bind(noteId).first();
+    
+    if (!note) {
+      return new Response(JSON.stringify({ error: 'Note not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get the highest sort_order and add 1 (append to end of queue)
+    const maxOrder = await env.DB.prepare('SELECT MAX(sort_order) as max FROM submissions WHERE status = ?').bind('approved').first();
+    const newSortOrder = (maxOrder?.max || 0) + 1;
+
+    // Add note back to submissions table as approved
+    await env.DB.prepare('INSERT INTO submissions (text, status, sort_order) VALUES (?, ?, ?)')
+      .bind(note.text, 'approved', newSortOrder).run();
+
+    // Remove from notes table
+    await env.DB.prepare('DELETE FROM notes WHERE id = ?').bind(noteId).run();
+    
+    // Clear cache for any affected drops
+    const dropId = getTodayDropId();
+    await env.CACHE.delete(`drop_${dropId}`);
+    
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Failed to recycle note' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
