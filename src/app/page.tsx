@@ -347,13 +347,13 @@ export default function Home() {
       : noteToShare.text
     
     const shareMessages = [
-      "Ok this site is weirdly wholesome and I'm here for it →",
-      "Who knew reading about other people's good days can make yours better?",
-      "Coffee, Crossword, Gratitude. My new morning ritual →",
-      "Remind yourself what matters most →", 
-      "Pause and reflect on positive things →",
-      "Warning: gratitude may be contagious →",
-      "A moment of calm in a noisy world →" 
+      "What are you grateful for today?",
+      "What are you thankful for?", 
+      "What's something you're grateful for today?",
+      "What are you most grateful for right now?",
+      "Today's thing to be grateful for:",
+      "Something to be grateful for today:",
+      "Somebody's grateful for:"
      ]
     
     const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
