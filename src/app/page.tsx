@@ -402,6 +402,13 @@ export default function Home() {
         <section id="notes-section" className="mb-12">
           {drop?.notes && drop.notes.length > 0 ? (
             <div className="relative">
+              {/* Question heading */}
+              <div className="text-center mb-8">
+                <h2 className="text-2xl md:text-3xl font-semibold text-slate-700">
+                  What are you grateful for today?
+                </h2>
+              </div>
+
               {/* Progress indicator */}
               <div className="flex justify-center space-x-2 mb-6">
                 {drop.notes.map((_, index) => (
