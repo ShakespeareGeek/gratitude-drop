@@ -359,13 +359,13 @@ export default function Home() {
     const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
     const shortCode = encodeNoteId(noteId)
     const shareLink = `https://www.gratitudedrop.com/?r=${shortCode}`
-    const fullShareText = `${randomMessage}\n\n"${noteText}"\n\n${shareLink} #GratitudeDrop`
+    const fullShareText = `${randomMessage}\n\n"${noteText}"\n\n${shareLink} #gratitude`
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(fullShareText)}`
     
     // Try native sharing first (mobile), fallback to Twitter
     if (navigator.share) {
       navigator.share({
-        text: `${randomMessage}\n\n"${noteText}"\n\n${shareLink} #GratitudeDrop`
+        text: `${randomMessage}\n\n"${noteText}"\n\n${shareLink} #gratitude`
       }).catch(() => {
         // Fallback to Twitter if native sharing fails
         window.open(shareUrl, '_blank')
