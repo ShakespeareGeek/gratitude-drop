@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
 // Extend Window interface for Plausible
 declare global {
@@ -20,6 +20,21 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
+
+  // Random writing prompt titles
+  const modalTitle = useMemo(() => {
+    const prompts = [
+      "What are you grateful for?",
+      "What are you thankful for?",
+      "What brings you joy?",
+      "What makes you smile?",
+      "What brightens your day?",
+      "What makes you happy?",
+      "What brings you peace?",
+      "What warms your heart?"
+    ]
+    return prompts[Math.floor(Math.random() * prompts.length)]
+  }, [isOpen]) // Regenerate when modal opens
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,7 +93,7 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
         ) : (
           <>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-slate-800">Share your gratitude</h2>
+              <h2 className="text-xl font-semibold text-slate-800">{modalTitle}</h2>
               <button
                 onClick={onClose}
                 className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
@@ -89,7 +104,7 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-emerald-800 mb-2">
-                <strong>Share your story!</strong> The most meaningful notes tell us why something matters to you. You have plenty of space (280 characters) to paint a picture.
+                <strong>Tell your story!</strong> The most meaningful notes tell us why something matters to you. You have plenty of space (280 characters) to paint a picture.
               </p>
             </div>
 
