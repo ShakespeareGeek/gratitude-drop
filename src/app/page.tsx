@@ -425,33 +425,43 @@ export default function Home() {
               </div>
 
               {/* Current note display */}
-              <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200 min-h-[300px] flex flex-col justify-between">
+              <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200 min-h-[300px] flex flex-col justify-between relative">
+                {/* Share button in top-right corner */}
+                <div className="absolute top-4 right-4">
+                  <button
+                    onClick={() => handleShare(drop.notes[currentNoteIndex].id)}
+                    className="flex items-center space-x-2 text-slate-500 hover:text-emerald-600 transition-colors px-3 py-2 rounded-lg hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200"
+                    title="Share this note"
+                  >
+                    <span className="text-lg">↗</span>
+                    <span className="font-medium text-sm">Share</span>
+                  </button>
+                </div>
+
                 <div className="flex-grow flex items-center">
                   <p className="text-xl md:text-2xl font-serif text-slate-700 leading-relaxed text-center">
                     "{drop.notes[currentNoteIndex].text}"
                   </p>
                 </div>
                 
-                <div className="flex items-center justify-between mt-8">
+                {/* Centered like button */}
+                <div className="flex justify-center mt-8">
                   <button
                     onClick={() => handleHeart(drop.notes[currentNoteIndex].id)}
-                    className={`flex items-center space-x-2 transition-colors ${
+                    className={`flex items-center space-x-3 px-6 py-3 rounded-full border-2 transition-all duration-200 transform hover:scale-105 ${
                       likedNotes.has(Number(drop.notes[currentNoteIndex].id))
-                        ? 'text-red-500 hover:text-red-400' 
-                        : 'text-slate-400 hover:text-red-500'
+                        ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-500'
                     }`}
                     title={likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Unlike this note' : 'Like this note'}
                   >
-                    <span className="text-2xl">♥</span>
-                    <span className="font-medium text-lg">{drop.notes[currentNoteIndex].hearts}</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => handleShare(drop.notes[currentNoteIndex].id)}
-                    className="flex items-center space-x-2 text-slate-400 hover:text-emerald-500 transition-colors"
-                  >
-                    <span className="text-xl">↗</span>
-                    <span className="font-medium">Share this note</span>
+                    <span className="text-3xl">♥</span>
+                    <span className="font-semibold text-lg">
+                      {likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Liked' : 'Like'}
+                    </span>
+                    <span className="bg-white px-2 py-1 rounded-full text-sm font-medium">
+                      {drop.notes[currentNoteIndex].hearts}
+                    </span>
                   </button>
                 </div>
               </div>
