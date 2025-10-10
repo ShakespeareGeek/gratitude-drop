@@ -104,7 +104,7 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-emerald-800 mb-2">
-                <strong>Tell your story!</strong> The most meaningful notes tell us why something matters to you. You have plenty of space (280 characters) to paint a picture.
+                <strong>Tell your stories!</strong> The most meaningful notes tell us why something matters to you. You have plenty of space (280 characters) to paint a picture. Feel free to submit multiple notes!
               </p>
             </div>
 

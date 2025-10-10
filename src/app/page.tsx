@@ -527,7 +527,7 @@ export default function Home() {
             }}
             className="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-4 px-8 rounded-lg transition-colors text-lg inline-flex items-center space-x-2"
           >
-            <span>Submit your own note</span>
+            <span>Add your own notes</span>
             <span className="text-xl">›</span>
           </button>
         </div>
