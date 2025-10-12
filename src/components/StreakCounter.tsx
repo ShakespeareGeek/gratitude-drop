@@ -97,7 +97,7 @@ export default function StreakCounter() {
     if (navigator.share) {
       navigator.share({
         title: 'My Gratitude Journey',
-        text: `I've been reading daily gratitude notes for ${streak} days straight!`,
+        text: randomMessage,
         url: 'https://www.gratitudedrop.com'
       }).catch(() => {
         window.open(shareUrl, '_blank')
