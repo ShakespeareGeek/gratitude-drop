@@ -389,8 +389,8 @@ export default function Home() {
       <StreakCounter />
       
 
-      <div className="container mx-auto px-4 py-12 max-w-2xl">
-        <header className="text-center mb-12">
+      <div className="container mx-auto px-4 py-6 max-w-2xl">
+        <header className="text-center mb-6 pt-16 md:pt-4">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-800 mb-4">
             The Daily Gratitude Drop
           </h1>
@@ -399,23 +399,23 @@ export default function Home() {
           </p>
         </header>
 
-        <section id="notes-section" className="mb-12">
+        <section id="notes-section" className="mb-6">
           {drop?.notes && drop.notes.length > 0 ? (
             <div className="relative">
               {/* Question heading */}
-              <div className="text-center mb-8">
-                <h2 className="text-2xl md:text-3xl font-semibold text-slate-700">
+              <div className="text-center mb-4">
+                <h2 className="text-xl md:text-2xl font-semibold text-slate-700">
                   What are you grateful for today?
                 </h2>
               </div>
 
-              {/* Progress indicator */}
-              <div className="flex justify-center space-x-2 mb-6">
+              {/* Compact progress indicator */}
+              <div className="flex justify-center space-x-1.5 mb-4">
                 {drop.notes.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => goToNote(index)}
-                    className={`w-3 h-3 rounded-full transition-colors ${
+                    className={`w-2 h-2 rounded-full transition-colors ${
                       index === currentNoteIndex 
                         ? 'bg-emerald-500' 
                         : 'bg-slate-300 hover:bg-slate-400'
@@ -425,9 +425,36 @@ export default function Home() {
               </div>
 
               {/* Current note display */}
-              <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200 min-h-[300px] flex flex-col justify-between relative">
-                {/* Share button in top-right corner */}
-                <div className="absolute top-4 right-4">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-slate-200 min-h-[200px] flex items-center relative">
+                {/* Text content */}
+                <div className="flex-1 pr-6">
+                  <p className="text-xl md:text-2xl font-serif text-slate-700 leading-relaxed">
+                    "{drop.notes[currentNoteIndex].text}"
+                  </p>
+                </div>
+                
+                {/* Action buttons on the right */}
+                <div className="flex flex-col space-y-3 flex-shrink-0">
+                  {/* Like button */}
+                  <button
+                    onClick={() => handleHeart(drop.notes[currentNoteIndex].id)}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-full border-2 transition-all duration-200 transform hover:scale-105 ${
+                      likedNotes.has(Number(drop.notes[currentNoteIndex].id))
+                        ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-500'
+                    }`}
+                    title={likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Unlike this note' : 'Like this note'}
+                  >
+                    <span className="text-xl">♥</span>
+                    <span className="font-medium text-sm">
+                      {likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Liked' : 'Like'}
+                    </span>
+                    <span className="bg-white px-2 py-1 rounded-full text-xs font-medium">
+                      {drop.notes[currentNoteIndex].hearts}
+                    </span>
+                  </button>
+                  
+                  {/* Share button */}
                   <button
                     onClick={() => handleShare(drop.notes[currentNoteIndex].id)}
                     className="flex items-center space-x-2 text-slate-500 hover:text-emerald-600 transition-colors px-3 py-2 rounded-lg hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200"
@@ -437,75 +464,45 @@ export default function Home() {
                     <span className="font-medium text-sm">Share</span>
                   </button>
                 </div>
-
-                <div className="flex-grow flex items-center">
-                  <p className="text-xl md:text-2xl font-serif text-slate-700 leading-relaxed text-center">
-                    "{drop.notes[currentNoteIndex].text}"
-                  </p>
-                </div>
-                
-                {/* Centered like button */}
-                <div className="flex justify-center mt-8">
-                  <button
-                    onClick={() => handleHeart(drop.notes[currentNoteIndex].id)}
-                    className={`flex items-center space-x-3 px-6 py-3 rounded-full border-2 transition-all duration-200 transform hover:scale-105 ${
-                      likedNotes.has(Number(drop.notes[currentNoteIndex].id))
-                        ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-500'
-                    }`}
-                    title={likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Unlike this note' : 'Like this note'}
-                  >
-                    <span className="text-3xl">♥</span>
-                    <span className="font-semibold text-lg">
-                      {likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Liked' : 'Like'}
-                    </span>
-                    <span className="bg-white px-2 py-1 rounded-full text-sm font-medium">
-                      {drop.notes[currentNoteIndex].hearts}
-                    </span>
-                  </button>
-                </div>
               </div>
 
-              {/* Navigation arrows */}
-              <div className="flex justify-between items-center mt-6">
+              {/* Compact navigation */}
+              <div className="flex justify-center items-center mt-3 space-x-4">
                 <button
                   onClick={prevNote}
                   disabled={currentNoteIndex === 0}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  className={`p-2 rounded-full transition-colors ${
                     currentNoteIndex === 0 
                       ? 'text-slate-300 cursor-not-allowed' 
                       : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                   }`}
+                  title="Previous note"
                 >
-                  <span className="text-xl">&larr;</span>
-                  <span className="font-medium">Previous</span>
+                  <span className="text-lg">&larr;</span>
                 </button>
 
-                <div className="text-sm text-slate-500 font-medium">
+                <div className="text-xs text-slate-500 font-medium px-3">
                   {currentNoteIndex + 1} of {drop.notes.length}
                 </div>
 
                 <button
                   onClick={nextNote}
                   disabled={currentNoteIndex === drop.notes.length - 1}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  className={`p-2 rounded-full transition-colors ${
                     currentNoteIndex === drop.notes.length - 1
                       ? 'text-slate-300 cursor-not-allowed' 
                       : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
                   }`}
+                  title="Next note"
                 >
-                  <span className="font-medium">Next</span>
-                  <span className="text-xl">&rarr;</span>
+                  <span className="text-lg">&rarr;</span>
                 </button>
               </div>
 
-              {/* Navigation hints */}
-              <div className="text-center mt-4">
-                <p className="text-xs text-slate-400 md:hidden">
-                  Swipe left or right to navigate • Auto-advances every 8s {autoAdvancePaused ? '(paused)' : ''}
-                </p>
-                <p className="text-xs text-slate-400 hidden md:block">
-                  Drag, use arrow keys, or click buttons to navigate • Auto-advances every 8s {autoAdvancePaused ? '(paused)' : ''}
+              {/* Simplified navigation hint */}
+              <div className="text-center mt-2">
+                <p className="text-xs text-slate-400">
+                  Swipe or drag to navigate
                 </p>
               </div>
             </div>
@@ -516,7 +513,7 @@ export default function Home() {
           )}
         </section>
 
-        <div className="text-center pb-12">
+        <div className="text-center pb-6">
           <button
             onClick={() => {
               setShowModal(true)
@@ -532,7 +529,7 @@ export default function Home() {
           </button>
         </div>
 
-        <div className="text-center pb-16">
+        <div className="text-center pb-8">
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mx-auto max-w-sm">
             <p className="text-sm text-slate-600 mb-2">
               <strong>Have feedback or ideas?</strong>

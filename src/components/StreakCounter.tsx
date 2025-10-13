@@ -84,11 +84,12 @@ export default function StreakCounter() {
   }
 
   const handleShare = () => {
+    const dayText = streak === 1 ? 'day' : 'days'
     const shareMessages = [
-      `I've been reading daily gratitude notes for ${streak} days straight! Join me at gratitudedrop.com 🔥`,
-      `${streak} days of daily gratitude and counting! These anonymous thank-you notes are so heartwarming → gratitudedrop.com`,
-      `Day ${streak} of my gratitude journey! Five beautiful anonymous notes daily → gratitudedrop.com 💚`,
-      `${streak} days of starting my day with gratitude! Check out these daily notes → gratitudedrop.com ✨`
+      `I've been reading daily gratitude notes for ${streak} ${dayText} straight! Join me at gratitudedrop.com 🔥`,
+      `${streak} ${dayText} of daily gratitude and counting → gratitudedrop.com`,
+      `Day ${streak} of my gratitude journey! gratitudedrop.com 💚`,
+      `${streak} ${dayText} of starting my day with gratitude! Check out these daily notes → gratitudedrop.com ✨`
     ]
     
     const randomMessage = shareMessages[Math.floor(Math.random() * shareMessages.length)]
@@ -97,8 +98,7 @@ export default function StreakCounter() {
     if (navigator.share) {
       navigator.share({
         title: 'My Gratitude Journey',
-        text: randomMessage,
-        url: 'https://www.gratitudedrop.com'
+        text: randomMessage
       }).catch(() => {
         window.open(shareUrl, '_blank')
       })
