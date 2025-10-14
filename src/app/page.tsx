@@ -228,10 +228,16 @@ export default function Home() {
     setLikedNotes(liked)
   }
 
+  // Helper function to consistently check if a note is liked
+  const isNoteLiked = (noteId: number | string): boolean => {
+    const numericId = Number(noteId)
+    return likedNotes.has(numericId)
+  }
+
   const handleHeart = async (noteId: number) => {
     pauseAutoAdvance()
     
-    // Ensure we're working with a number
+    // Ensure we're working with a number - the backend might return strings
     const numericNoteId = Number(noteId)
     const isLiked = likedNotes.has(numericNoteId)
     
@@ -437,17 +443,18 @@ export default function Home() {
                 <div className="flex flex-col space-y-3 flex-shrink-0">
                   {/* Like button */}
                   <button
-                    onClick={() => handleHeart(drop.notes[currentNoteIndex].id)}
+                    key={`like-${drop.notes[currentNoteIndex].id}-${likedNotes.size}`}
+                    onClick={() => handleHeart(Number(drop.notes[currentNoteIndex].id))}
                     className={`flex items-center space-x-2 px-3 py-2 rounded-full border-2 transition-all duration-200 transform hover:scale-105 ${
-                      likedNotes.has(Number(drop.notes[currentNoteIndex].id))
+                      isNoteLiked(drop.notes[currentNoteIndex].id)
                         ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
                         : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-500'
                     }`}
-                    title={likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Unlike this note' : 'Like this note'}
+                    title={isNoteLiked(drop.notes[currentNoteIndex].id) ? 'Unlike this note' : 'Like this note'}
                   >
                     <span className="text-xl">♥</span>
                     <span className="font-medium text-sm">
-                      {likedNotes.has(Number(drop.notes[currentNoteIndex].id)) ? 'Liked' : 'Like'}
+                      {isNoteLiked(drop.notes[currentNoteIndex].id) ? 'Liked' : 'Like'}
                     </span>
                     <span className="bg-white px-2 py-1 rounded-full text-xs font-medium">
                       {drop.notes[currentNoteIndex].hearts}
