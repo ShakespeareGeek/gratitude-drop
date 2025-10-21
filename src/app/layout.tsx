@@ -4,10 +4,10 @@ import './globals.css'
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.gratitudedrop.com'),
   title: 'The Daily Gratitude Drop',
-  description: '5 anonymous thank-you notes. One minute. Zero noise.',
+  description: '3 anonymous thank-you notes. One minute. Zero noise.',
   openGraph: {
     title: 'The Daily Gratitude Drop',
-    description: '5 anonymous thank-you notes. One minute. Zero noise.',
+    description: '3 anonymous thank-you notes. One minute. Zero noise.',
     url: 'https://www.gratitudedrop.com',
     siteName: 'Gratitude Drop',
     images: [
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'The Daily Gratitude Drop',
-    description: '5 anonymous thank-you notes. One minute. Zero noise.',
+    description: '3 anonymous thank-you notes. One minute. Zero noise.',
     images: ['https://www.gratitudedrop.com/card.png'],
   },
 }

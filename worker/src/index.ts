@@ -132,16 +132,16 @@ export default {
 async function ensureTodayDropExists(env: Env): Promise<void> {
   const dropId = getTodayDropId();
   
-  // Check if today's drop already has exactly 5 notes
+  // Check if today's drop already has exactly 3 notes
   const existingNotes = await env.DB.prepare('SELECT COUNT(*) as count FROM notes WHERE dropId = ?').bind(dropId).first();
   const currentCount = existingNotes?.count || 0;
   
-  if (currentCount >= 5) {
-    return; // Drop already complete with 5+ notes
+  if (currentCount >= 3) {
+    return; // Drop already complete with 3+ notes
   }
   
-  // Calculate how many more notes we need (up to 5 total)
-  const needed = 5 - currentCount;
+  // Calculate how many more notes we need (up to 3 total)
+  const needed = 3 - currentCount;
   
   // Get the next highest priority approved submissions (lowest sort_order = highest priority)
   const approvedNotes = await env.DB.prepare(
@@ -419,7 +419,7 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
     
     <div class="queue-info">
       <strong>Approved Queue:</strong> ${approved.results?.length || 0} notes ready
-      <br><strong>Next 5 drops:</strong> Will be filled from highest priority notes
+      <br><strong>Next drops:</strong> Will be filled from highest priority notes
       <br><a href="/admin/analytics?key=${key}" style="color: #059669; text-decoration: none; font-weight: bold;">📊 View Analytics & Best Performing Notes</a>
     </div>
 

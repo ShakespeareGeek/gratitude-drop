@@ -401,7 +401,7 @@ export default function Home() {
             The Daily Gratitude Drop
           </h1>
           <p className="text-xl text-slate-600">
-            5 anonymous thank-you notes. One minute. Zero noise.
+            3 anonymous thank-you notes. One minute. Zero noise.
           </p>
         </header>
 
