@@ -87,7 +87,18 @@ export default function SubmissionModal({ isOpen, onClose, apiBase }: Submission
         {submitted ? (
           <div className="text-center">
             <div className="text-emerald-600 text-4xl mb-4">✓</div>
-            <p className="text-slate-700 font-medium">Thank you!</p>
+            <p className="text-slate-700 font-medium">{(() => {
+              const thankYouMessages = [
+                "Thank you!",
+                "Thanks for sharing your story!",
+                "We're grateful for your contribution.",
+                "Your gratitude means a lot.",
+                "Thank you for adding to the drop!",
+                "We appreciate you sharing this.",
+                "Thanks for spreading gratitude!"
+              ]
+              return thankYouMessages[Math.floor(Math.random() * thankYouMessages.length)]
+            })()}</p>
             <p className="text-slate-500 text-sm">Your note will be reviewed for a future drop.</p>
           </div>
         ) : (

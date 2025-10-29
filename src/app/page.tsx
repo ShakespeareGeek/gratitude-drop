@@ -34,11 +34,13 @@ export default function Home() {
   const [showSharedModal, setShowSharedModal] = useState(false)
   const [currentNoteIndex, setCurrentNoteIndex] = useState(0)
   const [autoAdvancePaused, setAutoAdvancePaused] = useState(false)
+  const [creatorMessage, setCreatorMessage] = useState<string>('')
 
   useEffect(() => {
     fetchDrop()
     loadLikedNotes()
     checkSharedNote()
+    fetchCreatorMessage()
   }, [])
 
   // Keyboard navigation
@@ -206,6 +208,16 @@ export default function Home() {
       console.error('Failed to fetch drop:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCreatorMessage = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/creator-message`)
+      const data = await res.json()
+      setCreatorMessage(data.message || '')
+    } catch (error) {
+      console.error('Failed to fetch creator message:', error)
     }
   }
 
@@ -401,9 +413,17 @@ export default function Home() {
             The Daily Gratitude Drop
           </h1>
           <p className="text-xl text-slate-600">
-            3 anonymous thank-you notes. One minute. Zero noise.
+            Anonymous thank-you notes. One minute. Zero noise.
           </p>
         </header>
+
+        {creatorMessage && (
+          <div className="text-center mb-6">
+            <p className="text-lg text-slate-500 italic">
+              {creatorMessage}
+            </p>
+          </div>
+        )}
 
         <section id="notes-section" className="mb-6">
           {drop?.notes && drop.notes.length > 0 ? (
@@ -520,6 +540,7 @@ export default function Home() {
           )}
         </section>
 
+
         <div className="text-center pb-6">
           <button
             onClick={() => {
@@ -564,6 +585,7 @@ export default function Home() {
           apiBase={API_BASE}
         />
       )}
+
 
       {showSharedModal && sharedNote && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

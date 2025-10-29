@@ -19,6 +19,14 @@ interface Submission {
   created: string;
 }
 
+interface EmailSubscriber {
+  id: number;
+  email: string;
+  created: string;
+  active: boolean;
+  unsubscribe_token: string;
+}
+
 function corsHeaders(env: Env, requestOrigin?: string) {
   // Allow both production domain and localhost for development
   const allowedOrigins = [
@@ -100,6 +108,18 @@ export default {
       
       if (url.pathname === '/api/submit' && request.method === 'POST') {
         return handleSubmit(request, env, corsHead);
+      }
+      
+      if (url.pathname === '/api/subscribe' && request.method === 'POST') {
+        return handleSubscribe(request, env, corsHead);
+      }
+      
+      if (url.pathname === '/api/creator-message') {
+        return handleCreatorMessage(request, env, corsHead);
+      }
+      
+      if (url.pathname === '/api/unsubscribe' && request.method === 'GET') {
+        return handleUnsubscribe(request, env);
       }
       
       if (url.pathname.startsWith('/api/note/') && request.method === 'GET') {
@@ -278,6 +298,47 @@ async function handleSubmit(request: Request, env: Env, corsHead: HeadersInit): 
   return new Response(JSON.stringify({ success: true }), {
     headers: { ...corsHead, 'Content-Type': 'application/json' }
   });
+}
+
+async function handleCreatorMessage(request: Request, env: Env, corsHead: HeadersInit): Promise<Response> {
+  try {
+    const messages = [
+      "Good to see you",
+      "Your words matter",
+      "You're part of something good",
+      "This moment counts",
+      "Your gratitude helps others",
+      "You're helping build something positive",
+      "Thanks for taking a minute",
+      "You're making this work",
+      "Simple acts, real impact",
+      "Every note matters"
+    ];
+
+    // Use today's drop ID as seed for consistent daily selection
+    const dropId = getTodayDropId();
+    
+    // Create a simple hash from the dropId to get a consistent random index
+    let hash = 0;
+    for (let i = 0; i < dropId.length; i++) {
+      const char = dropId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    const messageIndex = Math.abs(hash) % messages.length;
+    const selectedMessage = messages[messageIndex];
+
+    return new Response(JSON.stringify({ message: selectedMessage }), {
+      headers: { ...corsHead, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error getting creator message:', error);
+    return new Response(JSON.stringify({ error: 'Failed to get creator message' }), {
+      status: 500,
+      headers: { ...corsHead, 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 async function handleGetNote(request: Request, env: Env, corsHead: HeadersInit): Promise<Response> {
@@ -925,6 +986,124 @@ async function handleRecycleNote(request: Request, env: Env): Promise<Response> 
     return new Response(JSON.stringify({ error: 'Failed to recycle note' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+function generateUnsubscribeToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 32; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254;
+}
+
+async function handleSubscribe(request: Request, env: Env, corsHead: HeadersInit): Promise<Response> {
+  try {
+    const { email } = await request.json();
+    
+    if (!email || !isValidEmail(email)) {
+      return new Response(JSON.stringify({ error: 'Valid email address is required' }), {
+        status: 400,
+        headers: { ...corsHead, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check if email already exists
+    const existing = await env.DB.prepare('SELECT id FROM email_subscribers WHERE email = ? AND active = 1')
+      .bind(email.toLowerCase().trim()).first();
+    
+    if (existing) {
+      return new Response(JSON.stringify({ error: 'Email already subscribed' }), {
+        status: 409,
+        headers: { ...corsHead, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Generate unsubscribe token
+    const unsubscribeToken = generateUnsubscribeToken();
+    
+    // Insert new subscriber
+    await env.DB.prepare(`
+      INSERT INTO email_subscribers (email, active, unsubscribe_token, created) 
+      VALUES (?, 1, ?, datetime('now'))
+    `).bind(email.toLowerCase().trim(), unsubscribeToken).run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHead, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Failed to subscribe email' }), {
+      status: 500,
+      headers: { ...corsHead, 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+async function handleUnsubscribe(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token');
+  
+  if (!token) {
+    return new Response(`
+      <!DOCTYPE html>
+      <html><head><title>Unsubscribe - Gratitude Drop</title></head>
+      <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+        <h1>Invalid Unsubscribe Link</h1>
+        <p>This unsubscribe link is not valid. Please check your email for the correct link.</p>
+      </body></html>
+    `, { 
+      status: 400,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    });
+  }
+
+  try {
+    // Find and deactivate the subscriber
+    const result = await env.DB.prepare('UPDATE email_subscribers SET active = 0 WHERE unsubscribe_token = ? AND active = 1')
+      .bind(token).run();
+    
+    if (result.changes === 0) {
+      return new Response(`
+        <!DOCTYPE html>
+        <html><head><title>Unsubscribe - Gratitude Drop</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+          <h1>Already Unsubscribed</h1>
+          <p>You have already been unsubscribed or this link is no longer valid.</p>
+        </body></html>
+      `, { 
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      });
+    }
+
+    return new Response(`
+      <!DOCTYPE html>
+      <html><head><title>Unsubscribed - Gratitude Drop</title></head>
+      <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+        <h1>Successfully Unsubscribed</h1>
+        <p>You have been unsubscribed from daily gratitude notifications.</p>
+        <p>We're sorry to see you go! You can always resubscribe by visiting <a href="https://gratitudedrop.com">gratitudedrop.com</a></p>
+      </body></html>
+    `, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    });
+  } catch (error) {
+    return new Response(`
+      <!DOCTYPE html>
+      <html><head><title>Error - Gratitude Drop</title></head>
+      <body style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+        <h1>Error</h1>
+        <p>An error occurred while processing your unsubscribe request. Please try again later.</p>
+      </body></html>
+    `, { 
+      status: 500,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
     });
   }
 }
