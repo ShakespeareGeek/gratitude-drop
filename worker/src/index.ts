@@ -134,6 +134,10 @@ export default {
         return handleAdminAnalytics(request, env);
       }
       
+      if (url.pathname === '/admin/repeats') {
+        return handleAdminRepeats(request, env);
+      }
+      
       if (url.pathname === '/admin/delete-note' && request.method === 'POST') {
         return handleDeleteNote(request, env);
       }
@@ -482,6 +486,7 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
       <strong>Approved Queue:</strong> ${approved.results?.length || 0} notes ready
       <br><strong>Next drops:</strong> Will be filled from highest priority notes
       <br><a href="/admin/analytics?key=${key}" style="color: #059669; text-decoration: none; font-weight: bold;">📊 View Analytics & Best Performing Notes</a>
+      <br><a href="/admin/repeats?key=${key}" style="color: #059669; text-decoration: none; font-weight: bold;">🔄 View Repeat Contributors</a>
     </div>
 
     <div class="section">
@@ -898,6 +903,119 @@ async function handleAdminAnalytics(request: Request, env: Env): Promise<Respons
   `;
 
   return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+}
+
+async function handleAdminRepeats(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const key = url.searchParams.get('key');
+
+  if (key !== env.ADMIN_SECRET) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  try {
+    // Query to find IP addresses with more than 1 submission
+    const repeatContributors = await env.DB.prepare(`
+      SELECT 
+        ip_address,
+        COUNT(*) as submission_count,
+        MIN(created) as first_submission,
+        MAX(created) as last_submission
+      FROM submissions 
+      WHERE ip_address IS NOT NULL 
+        AND ip_address != 'recycled'
+      GROUP BY ip_address 
+      HAVING COUNT(*) > 1 
+      ORDER BY submission_count DESC, last_submission DESC
+    `).all();
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Repeat Contributors - Gratitude Drop Admin</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+          .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+          .stat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .stat-number { font-size: 24px; font-weight: bold; color: #059669; }
+          .stat-label { color: #6b7280; font-size: 14px; }
+          .contributors-table { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          table { width: 100%; border-collapse: collapse; }
+          th { background: #f9fafb; padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; }
+          td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+          tr:hover { background: #f9fafb; }
+          .ip-address { font-family: monospace; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; }
+          .submission-count { font-weight: bold; color: #059669; }
+          .date { color: #6b7280; font-size: 14px; }
+          .back-link { display: inline-block; margin-bottom: 20px; color: #059669; text-decoration: none; font-weight: bold; }
+          .back-link:hover { text-decoration: underline; }
+        </style>
+      </head>
+      <body>
+        <a href="/admin?key=${key}" class="back-link">&larr; Back to Admin</a>
+        
+        <div class="header">
+          <h1>🔄 Repeat Contributors</h1>
+          <p>IP addresses that have submitted more than one note</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number">${repeatContributors.results.length}</div>
+            <div class="stat-label">Repeat Contributors</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${repeatContributors.results.reduce((sum: number, row: any) => sum + row.submission_count, 0)}</div>
+            <div class="stat-label">Total Submissions from Repeats</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${repeatContributors.results.length > 0 ? Math.round(repeatContributors.results.reduce((sum: number, row: any) => sum + row.submission_count, 0) / repeatContributors.results.length * 10) / 10 : 0}</div>
+            <div class="stat-label">Avg Submissions per Repeat</div>
+          </div>
+        </div>
+
+        <div class="contributors-table">
+          <table>
+            <thead>
+              <tr>
+                <th>IP Address</th>
+                <th>Submissions</th>
+                <th>First Submission</th>
+                <th>Last Submission</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${repeatContributors.results.map((row: any) => `
+                <tr>
+                  <td><span class="ip-address">${row.ip_address}</span></td>
+                  <td><span class="submission-count">${row.submission_count}</span></td>
+                  <td><span class="date">${new Date(row.first_submission).toLocaleDateString()}</span></td>
+                  <td><span class="date">${new Date(row.last_submission).toLocaleDateString()}</span></td>
+                </tr>
+              `).join('')}
+              ${repeatContributors.results.length === 0 ? `
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 40px; color: #6b7280;">
+                    No repeat contributors found yet. This will populate as users submit multiple notes.
+                  </td>
+                </tr>
+              ` : ''}
+            </tbody>
+          </table>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return new Response(html, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    });
+  } catch (error) {
+    console.error('Error in handleAdminRepeats:', error);
+    return new Response('Error loading repeat contributors', { status: 500 });
+  }
 }
 
 async function handleDeleteNote(request: Request, env: Env): Promise<Response> {
