@@ -272,8 +272,8 @@ async function handleSubmit(request: Request, env: Env, corsHead: HeadersInit): 
     });
   }
 
-  await env.DB.prepare('INSERT INTO submissions (text) VALUES (?)')
-    .bind(text).run();
+  await env.DB.prepare('INSERT INTO submissions (text, ip_address) VALUES (?, ?)')
+    .bind(text, clientIP).run();
 
   // Send ntfy notification
   try {
@@ -969,8 +969,8 @@ async function handleRecycleNote(request: Request, env: Env): Promise<Response> 
     const newSortOrder = (maxOrder?.max || 0) + 1;
 
     // Add note back to submissions table as approved
-    await env.DB.prepare('INSERT INTO submissions (text, status, sort_order) VALUES (?, ?, ?)')
-      .bind(note.text, 'approved', newSortOrder).run();
+    await env.DB.prepare('INSERT INTO submissions (text, status, sort_order, ip_address) VALUES (?, ?, ?, ?)')
+      .bind(note.text, 'approved', newSortOrder, 'recycled').run();
 
     // Remove from notes table
     await env.DB.prepare('DELETE FROM notes WHERE id = ?').bind(noteId).run();

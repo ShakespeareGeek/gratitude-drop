@@ -16,5 +16,15 @@ CREATE TABLE IF NOT EXISTS submissions (
     text TEXT NOT NULL,
     status TEXT DEFAULT 'pending',
     priority INTEGER DEFAULT NULL,
+    sort_order INTEGER DEFAULT NULL,
+    ip_address TEXT,
+    created DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS email_subscribers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    active INTEGER DEFAULT 1,
+    unsubscribe_token TEXT NOT NULL UNIQUE,
     created DATETIME DEFAULT CURRENT_TIMESTAMP
 );
