@@ -11,7 +11,11 @@ declare global {
   }
 }
 
-export default function StreakCounter() {
+interface StreakCounterProps {
+  apiBase: string
+}
+
+export default function StreakCounter({ apiBase }: StreakCounterProps) {
   const [streak, setStreak] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [showWelcomeModal, setShowWelcomeModal] = useState(false)
@@ -185,6 +189,7 @@ export default function StreakCounter() {
         isOpen={showWelcomeModal}
         onClose={() => setShowWelcomeModal(false)}
         streak={streak}
+        apiBase={apiBase}
       />
 
       <CalendarReminderModal 

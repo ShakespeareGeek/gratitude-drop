@@ -404,7 +404,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-slate-100">
-      <StreakCounter />
+      <StreakCounter apiBase={API_BASE} />
       
 
       <div className="container mx-auto px-4 py-6 max-w-2xl">
