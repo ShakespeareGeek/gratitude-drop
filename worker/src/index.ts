@@ -156,6 +156,9 @@ export default {
 async function ensureTodayDropExists(env: Env): Promise<void> {
   const dropId = getTodayDropId();
   
+  // Clear cache first to ensure we get fresh data
+  await env.CACHE.delete(`drop_${dropId}`);
+  
   // Check if today's drop already has exactly 3 notes
   const existingNotes = await env.DB.prepare('SELECT COUNT(*) as count FROM notes WHERE dropId = ?').bind(dropId).first();
   const currentCount = existingNotes?.count || 0;
@@ -172,12 +175,32 @@ async function ensureTodayDropExists(env: Env): Promise<void> {
     'SELECT id, text FROM submissions WHERE status = ? ORDER BY sort_order ASC LIMIT ?'
   ).bind('approved', needed).all();
   
+  const availableApproved = approvedNotes.results?.length || 0;
+  
+  // If we don't have enough approved notes and the queue is low, recycle old notes
+  if (availableApproved < needed) {
+    await autoRecycleOldNotes(env, needed - availableApproved);
+    
+    // Get approved notes again after recycling
+    const refreshedApproved = await env.DB.prepare(
+      'SELECT id, text FROM submissions WHERE status = ? ORDER BY sort_order ASC LIMIT ?'
+    ).bind('approved', needed).all();
+    
+    approvedNotes.results = refreshedApproved.results;
+  }
+  
   if (approvedNotes.results && approvedNotes.results.length > 0) {
     // Ensure drop exists
     await env.DB.prepare('INSERT OR IGNORE INTO drops (dropId) VALUES (?)').bind(dropId).run();
     
-    // Move approved submissions to notes table
+    // Move approved submissions to notes table in a transaction-like manner
     for (const submission of approvedNotes.results) {
+      // Check again that we don't exceed 3 notes (race condition protection)
+      const recheck = await env.DB.prepare('SELECT COUNT(*) as count FROM notes WHERE dropId = ?').bind(dropId).first();
+      if ((recheck?.count || 0) >= 3) {
+        break; // Stop if we already have 3 notes
+      }
+      
       await env.DB.prepare('INSERT INTO notes (text, dropId, hearts) VALUES (?, ?, 0)')
         .bind(submission.text, dropId).run();
       
@@ -186,6 +209,74 @@ async function ensureTodayDropExists(env: Env): Promise<void> {
         .bind('used', submission.id).run();
     }
   }
+}
+
+async function autoRecycleOldNotes(env: Env, needed: number): Promise<void> {
+  // Check how many approved notes we currently have
+  const approvedCount = await env.DB.prepare('SELECT COUNT(*) as count FROM submissions WHERE status = ?').bind('approved').first();
+  const currentApproved = approvedCount?.count || 0;
+  
+  // Only recycle if we have fewer than 3 approved notes total
+  if (currentApproved >= 3) {
+    return; // We have enough approved notes, no need to recycle
+  }
+  
+  // Get the oldest 25 notes, then randomly sample from them
+  const oldNotesPool = await env.DB.prepare(`
+    SELECT n.id, n.text, n.hearts, n.dropId
+    FROM notes n
+    JOIN drops d ON n.dropId = d.dropId
+    WHERE n.dropId < ? 
+    ORDER BY n.dropId ASC
+    LIMIT 25
+  `).bind(getTodayDropId()).all();
+  
+  if (!oldNotesPool.results || oldNotesPool.results.length === 0) {
+    return; // No old notes available to recycle
+  }
+  
+  // Randomly sample the needed number of notes from the pool
+  const shuffled = oldNotesPool.results.sort(() => Math.random() - 0.5);
+  const oldNotes = { results: shuffled.slice(0, needed) };
+  
+  // Get the highest sort_order and start from there
+  const maxOrder = await env.DB.prepare('SELECT MAX(sort_order) as max FROM submissions WHERE status = ?').bind('approved').first();
+  let nextSortOrder = (maxOrder?.max || 0) + 1;
+  
+  // Recycle old notes back to the approved queue
+  for (const note of oldNotes.results) {
+    // Add note back to submissions table as approved
+    await env.DB.prepare('INSERT INTO submissions (text, status, sort_order, ip_address) VALUES (?, ?, ?, ?)')
+      .bind(note.text, 'approved', nextSortOrder, 'recycled').run();
+    
+    // Remove from notes table
+    await env.DB.prepare('DELETE FROM notes WHERE id = ?').bind(note.id).run();
+    
+    nextSortOrder++;
+  }
+  
+  // Send ntfy notification about auto-recycling
+  try {
+    const recycledCount = oldNotes.results.length;
+    const recycledTexts = oldNotes.results.map((note: any) => `"${note.text.substring(0, 60)}${note.text.length > 60 ? '...' : ''}"`).join('\n');
+    
+    await fetch('https://ntfy.sh/5vkbgcxwN0iZFVrB', {
+      method: 'POST',
+      headers: {
+        'Title': 'Auto-Recycled Notes',
+        'Tags': 'recycle,robot',
+        'Priority': '2'
+      },
+      body: `Autopilot recycled ${recycledCount} old note${recycledCount > 1 ? 's' : ''} back to queue:\n\n${recycledTexts}`
+    });
+  } catch (error) {
+    // Don't fail recycling if notification fails
+    console.error('Failed to send auto-recycle notification:', error);
+  }
+  
+  // Clear cache for any affected drops since we modified notes
+  const currentDropId = getTodayDropId();
+  await env.CACHE.delete(`drop_${currentDropId}`);
 }
 
 async function handleGetDrop(request: Request, env: Env, corsHead: HeadersInit): Promise<Response> {
