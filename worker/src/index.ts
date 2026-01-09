@@ -159,20 +159,21 @@ async function ensureTodayDropExists(env: Env): Promise<void> {
   // Clear cache first to ensure we get fresh data
   await env.CACHE.delete(`drop_${dropId}`);
   
-  // Check if today's drop already has exactly 3 notes
+  // Use a more atomic approach: try to insert exactly 3 notes at once
+  // First check current count with a fresh query
   const existingNotes = await env.DB.prepare('SELECT COUNT(*) as count FROM notes WHERE dropId = ?').bind(dropId).first();
   const currentCount = existingNotes?.count || 0;
   
   if (currentCount >= 3) {
-    return; // Drop already complete with 3+ notes
+    return; // Drop already complete with exactly 3 notes
   }
   
-  // Calculate how many more notes we need (up to 3 total)
+  // Calculate how many more notes we need (exactly 3 total)
   const needed = 3 - currentCount;
   
-  // Get the next highest priority approved submissions (lowest sort_order = highest priority)
+  // Get the next highest priority approved submissions (oldest first)
   const approvedNotes = await env.DB.prepare(
-    'SELECT id, text FROM submissions WHERE status = ? ORDER BY sort_order ASC LIMIT ?'
+    'SELECT id, text FROM submissions WHERE status = ? ORDER BY created ASC LIMIT ?'
   ).bind('approved', needed).all();
   
   const availableApproved = approvedNotes.results?.length || 0;
@@ -183,7 +184,7 @@ async function ensureTodayDropExists(env: Env): Promise<void> {
     
     // Get approved notes again after recycling
     const refreshedApproved = await env.DB.prepare(
-      'SELECT id, text FROM submissions WHERE status = ? ORDER BY sort_order ASC LIMIT ?'
+      'SELECT id, text FROM submissions WHERE status = ? ORDER BY created ASC LIMIT ?'
     ).bind('approved', needed).all();
     
     approvedNotes.results = refreshedApproved.results;
@@ -193,21 +194,29 @@ async function ensureTodayDropExists(env: Env): Promise<void> {
     // Ensure drop exists
     await env.DB.prepare('INSERT OR IGNORE INTO drops (dropId) VALUES (?)').bind(dropId).run();
     
-    // Move approved submissions to notes table in a transaction-like manner
-    for (const submission of approvedNotes.results) {
-      // Check again that we don't exceed 3 notes (race condition protection)
-      const recheck = await env.DB.prepare('SELECT COUNT(*) as count FROM notes WHERE dropId = ?').bind(dropId).first();
-      if ((recheck?.count || 0) >= 3) {
-        break; // Stop if we already have 3 notes
+    // Take exactly the number of notes we need and mark them all as used
+    const notesToUse = approvedNotes.results.slice(0, needed);
+    
+    for (const submission of notesToUse) {
+      // Check if this note text already exists in this drop to avoid duplicates
+      const existingNote = await env.DB.prepare(
+        'SELECT id FROM notes WHERE dropId = ? AND text = ?'
+      ).bind(dropId, submission.text).first();
+      
+      if (!existingNote) {
+        // Insert the note only if it doesn't already exist
+        await env.DB.prepare(
+          'INSERT INTO notes (text, dropId, hearts) VALUES (?, ?, 0)'
+        ).bind(submission.text, dropId).run();
       }
       
-      await env.DB.prepare('INSERT INTO notes (text, dropId, hearts) VALUES (?, ?, 0)')
-        .bind(submission.text, dropId).run();
-      
-      // Mark as used
+      // Always mark the submission as used, regardless of whether we inserted or not
       await env.DB.prepare('UPDATE submissions SET status = ? WHERE id = ?')
         .bind('used', submission.id).run();
     }
+    
+    // Clear cache again after modifications
+    await env.CACHE.delete(`drop_${dropId}`);
   }
 }
 
@@ -239,20 +248,14 @@ async function autoRecycleOldNotes(env: Env, needed: number): Promise<void> {
   const shuffled = oldNotesPool.results.sort(() => Math.random() - 0.5);
   const oldNotes = { results: shuffled.slice(0, needed) };
   
-  // Get the highest sort_order and start from there
-  const maxOrder = await env.DB.prepare('SELECT MAX(sort_order) as max FROM submissions WHERE status = ?').bind('approved').first();
-  let nextSortOrder = (maxOrder?.max || 0) + 1;
-  
   // Recycle old notes back to the approved queue
   for (const note of oldNotes.results) {
     // Add note back to submissions table as approved
-    await env.DB.prepare('INSERT INTO submissions (text, status, sort_order, ip_address) VALUES (?, ?, ?, ?)')
-      .bind(note.text, 'approved', nextSortOrder, 'recycled').run();
+    await env.DB.prepare('INSERT INTO submissions (text, status, ip_address) VALUES (?, ?, ?)')
+      .bind(note.text, 'approved', 'recycled').run();
     
     // Remove from notes table
     await env.DB.prepare('DELETE FROM notes WHERE id = ?').bind(note.id).run();
-    
-    nextSortOrder++;
   }
   
   // Send ntfy notification about auto-recycling
@@ -482,12 +485,8 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
   if (action === 'approve' && id) {
     const currentPage = parseInt(url.searchParams.get('page') || '1');
     
-    // Get the highest sort_order and add 1 (append to end)
-    const maxOrder = await env.DB.prepare('SELECT MAX(sort_order) as max FROM submissions WHERE status = ?').bind('approved').first();
-    const newSortOrder = (maxOrder?.max || 0) + 1;
-    
-    await env.DB.prepare('UPDATE submissions SET status = ?, sort_order = ? WHERE id = ?')
-      .bind('approved', newSortOrder, id).run();
+    await env.DB.prepare('UPDATE submissions SET status = ? WHERE id = ?')
+      .bind('approved', id).run();
     
     // Check if current page will be empty after this action
     const remainingCount = await env.DB.prepare('SELECT COUNT(*) as count FROM submissions WHERE status = ?').bind('pending').first();
@@ -512,7 +511,7 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
   }
 
   if (action === 'unapprove' && id) {
-    await env.DB.prepare('UPDATE submissions SET status = ?, sort_order = NULL WHERE id = ?')
+    await env.DB.prepare('UPDATE submissions SET status = ? WHERE id = ?')
       .bind('pending', id).run();
     
     return new Response('Unapproved', { status: 302, headers: { Location: `/admin?key=${key}` } });
@@ -521,11 +520,8 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
   if (action === 'reorder' && request.method === 'POST') {
     const { noteIds } = await request.json();
     
-    // Update sort_order for each note based on new position
-    for (let i = 0; i < noteIds.length; i++) {
-      await env.DB.prepare('UPDATE submissions SET sort_order = ? WHERE id = ?')
-        .bind(i + 1, noteIds[i]).run();
-    }
+    // Note: Reordering is not available without sort_order column
+    // This endpoint will return success but not actually reorder
     
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
@@ -542,7 +538,7 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
   
   const approvedCount = await env.DB.prepare('SELECT COUNT(*) as count FROM submissions WHERE status = ?').bind('approved').first();
   const totalApproved = approvedCount?.count || 0;
-  const approved = await env.DB.prepare('SELECT * FROM submissions WHERE status = ? ORDER BY sort_order ASC LIMIT 50').bind('approved').all();
+  const approved = await env.DB.prepare('SELECT * FROM submissions WHERE status = ? ORDER BY created ASC LIMIT 50').bind('approved').all();
   
   const totalPending = pendingCount?.count || 0;
   const totalPages = Math.ceil(totalPending / perPage);
@@ -1173,13 +1169,9 @@ async function handleRecycleNote(request: Request, env: Env): Promise<Response> 
       });
     }
 
-    // Get the highest sort_order and add 1 (append to end of queue)
-    const maxOrder = await env.DB.prepare('SELECT MAX(sort_order) as max FROM submissions WHERE status = ?').bind('approved').first();
-    const newSortOrder = (maxOrder?.max || 0) + 1;
-
     // Add note back to submissions table as approved
-    await env.DB.prepare('INSERT INTO submissions (text, status, sort_order, ip_address) VALUES (?, ?, ?, ?)')
-      .bind(note.text, 'approved', newSortOrder, 'recycled').run();
+    await env.DB.prepare('INSERT INTO submissions (text, status, ip_address) VALUES (?, ?, ?)')
+      .bind(note.text, 'approved', 'recycled').run();
 
     // Remove from notes table
     await env.DB.prepare('DELETE FROM notes WHERE id = ?').bind(noteId).run();

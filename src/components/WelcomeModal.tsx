@@ -2,12 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 
-// Extend Window interface for Plausible
-declare global {
-  interface Window {
-    plausible?: (event: string) => void
-  }
-}
 
 interface WelcomeModalProps {
   isOpen: boolean
@@ -99,9 +93,6 @@ export default function WelcomeModal({ isOpen, onClose, streak, apiBase }: Welco
       if (res.ok) {
         setSubmitted(true)
         setText('')
-        if (typeof window !== 'undefined') {
-          window.plausible?.('Note Submitted - Welcome Modal')
-        }
         setTimeout(() => {
           setSubmitted(false)
           onClose()

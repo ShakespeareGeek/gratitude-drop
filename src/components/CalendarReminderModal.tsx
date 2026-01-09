@@ -2,12 +2,6 @@
 
 import { useState } from 'react'
 
-// Extend Window interface for Plausible
-declare global {
-  interface Window {
-    plausible?: (event: string) => void
-  }
-}
 
 interface CalendarReminderModalProps {
   isOpen: boolean
@@ -18,21 +12,12 @@ export default function CalendarReminderModal({ isOpen, onClose }: CalendarRemin
   const [downloading, setDownloading] = useState(false)
 
   const handleClose = () => {
-    // Track analytics for modal close
-    if (typeof window !== 'undefined') {
-      window.plausible?.('Calendar Modal Close')
-    }
     onClose()
   }
 
   const generateICS = (timeOption: 'morning' | 'noon' | 'evening') => {
     setDownloading(true)
     
-    // Track analytics for time selection and download
-    if (typeof window !== 'undefined') {
-      window.plausible?.(`Calendar Time Selected - ${timeOption}`)
-      window.plausible?.(`Calendar Download - ${timeOption}`)
-    }
 
     // Set time based on option
     let hour: string

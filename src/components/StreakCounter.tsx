@@ -4,12 +4,6 @@ import { useState, useEffect } from 'react'
 import WelcomeModal from './WelcomeModal'
 import CalendarReminderModal from './CalendarReminderModal'
 
-// Extend Window interface for Plausible
-declare global {
-  interface Window {
-    plausible?: (event: string) => void
-  }
-}
 
 interface StreakCounterProps {
   apiBase: string
@@ -37,10 +31,6 @@ export default function StreakCounter({ apiBase }: StreakCounterProps) {
       setStreak(1)
       setShowWelcomeModal(true)
       
-      // Track new user
-      if (typeof window !== 'undefined') {
-        window.plausible?.('Streak Day 1')
-      }
       return
     }
 
@@ -57,10 +47,6 @@ export default function StreakCounter({ apiBase }: StreakCounterProps) {
       setStreak(newStreak)
       setShowWelcomeModal(true)
       
-      // Track streak milestone
-      if (typeof window !== 'undefined') {
-        window.plausible?.(`Streak Day ${newStreak}`)
-      }
     } else if (diffDays === 0) {
       // Same day
       setStreak(currentStreak)
@@ -71,11 +57,6 @@ export default function StreakCounter({ apiBase }: StreakCounterProps) {
       setStreak(1)
       setShowWelcomeModal(true)
       
-      // Track streak restart (and what they lost)
-      if (typeof window !== 'undefined') {
-        window.plausible?.(`Streak Broken - Was ${currentStreak}`)
-        window.plausible?.('Streak Day 1')
-      }
     }
   }
 
@@ -118,9 +99,6 @@ export default function StreakCounter({ apiBase }: StreakCounterProps) {
         <button
           onClick={() => {
             setShowModal(true)
-            if (typeof window !== 'undefined') {
-              window.plausible?.('Streak Modal Open')
-            }
           }}
           className="bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 border border-slate-200 transition-all hover:scale-105 cursor-pointer"
         >
@@ -134,9 +112,6 @@ export default function StreakCounter({ apiBase }: StreakCounterProps) {
         <button
           onClick={() => {
             setShowCalendarModal(true)
-            if (typeof window !== 'undefined') {
-              window.plausible?.('Calendar Modal Open')
-            }
           }}
           className="bg-white/80 hover:bg-white/90 backdrop-blur-sm rounded-full p-3 border border-slate-200 transition-all hover:scale-105 cursor-pointer"
           title="Set daily reminders"
