@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import SubmissionModal from '../components/SubmissionModal'
 import StreakCounter from '../components/StreakCounter'
 import { encodeNoteId, decodeShortCode } from '../utils/shortLink'
@@ -546,6 +547,22 @@ export default function Home() {
             <span>Add your own notes</span>
             <span className="text-xl">›</span>
           </button>
+        </div>
+
+        <div className="text-center pb-6">
+          <a
+            href="https://play.google.com/store/apps/details?id=com.gratitudedrop.mobile"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              src="/google_play_badge.png"
+              alt="Get it on Google Play"
+              width={200}
+              height={59}
+              className="inline-block"
+            />
+          </a>
         </div>
 
         <div className="text-center pb-8">
